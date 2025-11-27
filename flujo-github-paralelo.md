@@ -85,7 +85,7 @@ flowchart TD
     class DecisionDev1,DecisionPRD1,DecisionUAT,BaseLista,ReleaseLista decisionStyle
 ```
 
-## Diagrama de Flujo (Con rama uat)
+## Diagrama de Flujo (Con rama uat habilitada para iniciar JOB)
 ```mermaid
 flowchart TD
     Start([Inicio:<br/>Código en Producción]) --> Master[Rama MASTER<br/>Código actual en PRD]
@@ -132,13 +132,11 @@ flowchart TD
     
     RequestIDProd --> TransportProd[Transportar Request ID<br/>por SOLMAN a UAT]
     TransportProd --> UATCheck[Pasa por MELI UAT<br/>Solo feature/inic1111<br/>sin otras iniciativas]
-    UATCheck --> TransportPRD[Transporte a<br/>MELI PRD]
+    UATCheck --> UpdateMaster[Transporte a<br/>MELI PRD]
     
-    %% Actualización post-producción
-    TransportPRD --> UpdateStable[Actualizar master-stable<br/>con contenido de master<br/>antes del cambio]
-    UpdateStable --> UpdateUAT[Actualizar master<br/>con rama uat]
-        
-    UpdateUAT --> End([Proceso Completado<br/>PRD Actualizado])
+    %% Actualización post-producción    
+    UpdateMaster --> EndProcess[Actualizar master<br/>con rama uat cuando confirmen establidad]        
+    EndProcess --> End([Proceso Completado<br/>PRD Actualizado])
     
     %% Estilos
     classDef mainBranchStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
@@ -157,11 +155,10 @@ flowchart TD
     class PRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
     
     %% Camino PRD (verde)
-    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,UpdateStable,UpdateUAT prdPathStyle
+    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,UpdateMaster,EndProcess prdPathStyle
     
     %% Decisiones e informativos
     class DecisionDev1,DecisionPRD1,DecisionUAT,BaseLista decisionStyle
-  
   ```
 
 ## Leyenda de Ramas
