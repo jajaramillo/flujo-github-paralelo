@@ -19,11 +19,11 @@ flowchart TD
     DecisionDev1 -->|Sí| CreateTrans1[Crear feature/inic1111ToBase<br/>desde feature/inic1111]
     CreateTrans1 --> Trans1[feature/inic1111ToBase<br/>Rama de transición]
     Trans1 --> MergeToBase1[Merge feature/inic1111ToBase<br/>→ feature/base]
-    MergeToBase1 --> DeleteTrans1[Borrar<br/>feature/inic1111ToBase]
-       
-    DeleteTrans1 --> BaseLista{feature/base<br/>actualizada}
-    DeleteTrans2 --> BaseLista
+    
+          
     Base --> BaseLista
+    MergeToBase1 --> BaseLista{feature/base<br/>actualizada}
+    MergeToBase1 --> DeleteTrans1[Borrar<br/>feature/inic1111ToBase]
     
     BaseLista --> PRDev[Crear PR<br/>feature/base → develop]
     PRDev --> ApproveDev[Aprobar y Merge PR]
