@@ -132,9 +132,8 @@ flowchart TD
     
     %% Actualización post-producción
     TransportPRD --> UpdateStable[Actualizar master-stable<br/>con contenido de master<br/>antes del cambio]
-    UpdateStable --> UpdateMaster[Actualizar master<br/>con feature/release]
-    UpdateMaster --> UpdateUAT[Actualizar rama uat<br/>con feature/release]
-    
+    UpdateStable --> UpdateUAT[Actualizar master<br/>con feature/release]
+        
     UpdateUAT --> End([Proceso Completado<br/>PRD Actualizado])
     
     %% Estilos
