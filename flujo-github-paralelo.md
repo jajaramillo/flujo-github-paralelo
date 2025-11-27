@@ -37,7 +37,6 @@ flowchart TD
     
     %% Flujo para MELI PRD
     Dev1 --> DecisionPRD1{¿Listo para<br/>MELI PRD?}
-
     
     Master --> CreateRelease[Crear feature/release<br/>desde master]
     CreateRelease --> Release[feature/release<br/>Solo iniciativas<br/>listas para PRD]
@@ -64,21 +63,26 @@ flowchart TD
     UpdateUAT --> End([Proceso Completado<br/>PRD Actualizado])
     
     %% Estilos
-    classDef masterStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
-    classDef baseStyle fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
-    classDef devStyle fill:#51cf66,stroke:#2f9e44,stroke-width:2px,color:#fff
-    classDef releaseStyle fill:#ffd43b,stroke:#fab005,stroke-width:3px,color:#000
-    classDef transStyle fill:#a78bfa,stroke:#7c3aed,stroke-width:2px,color:#fff
-    classDef deployStyle fill:#ff922b,stroke:#e8590c,stroke-width:2px,color:#fff
+    classDef mainBranchStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
+    classDef featureBranchStyle fill:#a78bfa,stroke:#7c3aed,stroke-width:2px,color:#fff
+    classDef devPathStyle fill:#ff922b,stroke:#e8590c,stroke-width:2px,color:#fff
+    classDef prdPathStyle fill:#51cf66,stroke:#2f9e44,stroke-width:2px,color:#fff
     classDef decisionStyle fill:#f8f9fa,stroke:#495057,stroke-width:2px,color:#000
     
-    class Master,UpdateMaster,UpdateStable masterStyle
-    class Base,BaseLista baseStyle
-    class Dev1,DevN devStyle
-    class Release,ReleaseLista releaseStyle
-    class Trans1,CreateTrans1 transStyle
-    class DeployDev,DeployUAT,DeployDevProd,TransportPRD,UATCheck deployStyle
-    class DecisionDev1,DecisionUAT,DecisionPRD1 decisionStyle
+    %% Ramas principales: develop, uat, master
+    class Master mainBranchStyle
+    
+    %% Ramas de trabajo: feature/*, master-stable
+    class Base,Dev1,DevN,Trans1,CreateTrans1,Release featureBranchStyle
+    
+    %% Camino DEV (naranja) - comienza desde PRDev
+    class PRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
+    
+    %% Camino PRD (verde)
+    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,UpdateStable,UpdateMaster,UpdateUAT prdPathStyle
+    
+    %% Decisiones e informativos
+    class DecisionDev1,DecisionPRD1,DecisionUAT,BaseLista,ReleaseLista decisionStyle
 ```
 
 ## Diagrama de Flujo (Con rama uat)
@@ -127,31 +131,37 @@ flowchart TD
     DeployDevProd --> RequestIDProd[CI/CD genera<br/>Request ID]
     
     RequestIDProd --> TransportProd[Transportar Request ID<br/>por SOLMAN a UAT]
-    TransportProd --> UATCheck[Pasa por MELI UAT<br/>Solo feature/release<br/>sin otras iniciativas]
+    TransportProd --> UATCheck[Pasa por MELI UAT<br/>Solo feature/inic1111<br/>sin otras iniciativas]
     UATCheck --> TransportPRD[Transporte a<br/>MELI PRD]
     
     %% Actualización post-producción
     TransportPRD --> UpdateStable[Actualizar master-stable<br/>con contenido de master<br/>antes del cambio]
-    UpdateStable --> UpdateUAT[Actualizar master<br/>con feature/release]
+    UpdateStable --> UpdateUAT[Actualizar master<br/>con rama uat]
         
     UpdateUAT --> End([Proceso Completado<br/>PRD Actualizado])
     
     %% Estilos
-    classDef masterStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
-    classDef baseStyle fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
-    classDef devStyle fill:#51cf66,stroke:#2f9e44,stroke-width:2px,color:#fff
-    classDef releaseStyle fill:#ffd43b,stroke:#fab005,stroke-width:3px,color:#000
-    classDef transStyle fill:#a78bfa,stroke:#7c3aed,stroke-width:2px,color:#fff
-    classDef deployStyle fill:#ff922b,stroke:#e8590c,stroke-width:2px,color:#fff
+    classDef mainBranchStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
+    classDef featureBranchStyle fill:#a78bfa,stroke:#7c3aed,stroke-width:2px,color:#fff
+    classDef devPathStyle fill:#ff922b,stroke:#e8590c,stroke-width:2px,color:#fff
+    classDef prdPathStyle fill:#51cf66,stroke:#2f9e44,stroke-width:2px,color:#fff
     classDef decisionStyle fill:#f8f9fa,stroke:#495057,stroke-width:2px,color:#000
     
-    class Master,UpdateMaster,UpdateStable masterStyle
-    class Base,BaseLista baseStyle
-    class Dev1,DevN devStyle
-    class Release,ReleaseLista releaseStyle
-    class Trans1,CreateTrans1 transStyle
-    class DeployDev,DeployUAT,DeployDevProd,TransportPRD,UATCheck deployStyle
-    class DecisionDev1,DecisionUAT,DecisionPRD1 decisionStyle
+    %% Ramas principales: develop, uat, master
+    class Master mainBranchStyle
+    
+    %% Ramas de trabajo: feature/*, master-stable
+    class Base,Dev1,DevN,Trans1,CreateTrans1 featureBranchStyle
+    
+    %% Camino DEV (naranja) - comienza desde PRDev
+    class PRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
+    
+    %% Camino PRD (verde)
+    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,UpdateStable,UpdateUAT prdPathStyle
+    
+    %% Decisiones e informativos
+    class DecisionDev1,DecisionPRD1,DecisionUAT,BaseLista decisionStyle
+  
   ```
 
 ## Leyenda de Ramas
