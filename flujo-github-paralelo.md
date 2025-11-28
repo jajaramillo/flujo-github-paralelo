@@ -1,6 +1,6 @@
 # Flujo de Trabajo GitHub - Desarrollos en Paralelo
 
-## Diagrama de Flujo
+## Diagrama de Flujo (Deploy con aprobación en vez de merge)
 
 ```mermaid
 flowchart TD
