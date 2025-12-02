@@ -1,25 +1,24 @@
 # 🚀 Estrategia de Branching Git para MELI
 
-**Gestión de desarrollo paralelo con integración continua y despliegues controlados**
+> Gestión de desarrollo paralelo con integración continua y despliegues controlados
+
+## 📋 Tabla de Contenidos
+
+- [Diagrama de Flujo](#-diagrama-de-flujo-completo)
+- [Estructura de Ramas](#-estructura-de-ramas)
+- [Flujo de Trabajo](#-flujo-de-trabajo-detallado)
+  - [Fase 1: Desarrollo](#fase-1-desarrollo-de-iniciativa)
+  - [Fase 2: MELI DEV](#fase-2-despliegue-a-meli-dev)
+  - [Fase 3: MELI UAT](#fase-3-transporte-a-meli-uat)
+  - [Fase 4: Preparación PRD](#fase-4-preparación-para-meli-prd)
+  - [Fase 5: MELI PRD](#fase-5-despliegue-a-meli-prd)
+- [Reglas y Prácticas](#️-reglas-y-mejores-prácticas)
+- [Nomenclatura](#-convenciones-de-nomenclatura)
+- [Ambientes](#-ambientes)
 
 ---
 
 ## 📊 Diagrama de Flujo Completo
-
-### 🎨 Leyenda de Colores
-
-| Color | Significado |
-|-------|-------------|
-| 🔴 Rojo | Ramas principales (master) |
-| 🟣 Morado | Ramas feature (feature/inic*, feature/*ToConsolidate) |
-| 🔵 Azul claro | Ramas release/consolidate (feature/release-MMDD, feature/consolidate) |
-| 🟠 Naranja | Flujo DEV - Despliegue a MELI DEV/UAT |
-| 🟢 Verde | Flujo PRD - Despliegue a MELI PRD |
-| ⚪ Gris | Decisiones y puntos de control |
-
-### 📋 Código Mermaid del Diagrama
-
-Para visualizar el diagrama, copia este código y pégalo en: https://mermaid.live
 
 ```mermaid
 flowchart TD
@@ -103,24 +102,24 @@ flowchart TD
     classDef prdPathStyle fill:#51cf66,stroke:#2f9e44,stroke-width:2px,color:#fff
     classDef decisionStyle fill:#f8f9fa,stroke:#495057,stroke-width:2px,color:#000
     
-    %% Ramas principales: master
     class Master mainBranchStyle
-    
-    %% Ramas de trabajo: feature/*
     class Base,Dev1,DevN,Trans1,CreateTrans1 featureBranchStyle
-    
-    %% Rama release
     class Release,CreateRelease,MergeInit1,MergeInitN,ReleaseReady releaseBranchStyle
-    
-    %% Camino DEV (naranja)
     class PRDevExists,CreatePRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
-    
-    %% Camino PRD (verde)
     class CheckMultiple,PRProdSingle,PRProdMulti,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,MergeProd,CheckRelease,UpdateMasterRelease,UpdateMasterFeature prdPathStyle
-    
-    %% Decisiones e informativos
     class DecisionDev1,DecisionPRD1,DecisionPRDN,DecisionUAT,BaseLista decisionStyle
 ```
+
+### 🎨 Leyenda de Colores
+
+| Color | Descripción |
+|-------|-------------|
+| 🔴 **Rojo** | Ramas principales (master) |
+| 🟣 **Morado** | Ramas feature (feature/inic*, feature/*ToConsolidate) |
+| 🔵 **Azul claro** | Ramas release/consolidate (feature/release-MMDD, feature/consolidate) |
+| 🟠 **Naranja** | Flujo DEV - Despliegue a MELI DEV/UAT |
+| 🟢 **Verde** | Flujo PRD - Despliegue a MELI PRD |
+| ⚪ **Gris** | Decisiones y puntos de control |
 
 ---
 
@@ -130,18 +129,19 @@ flowchart TD
 |------|-----------|---------------|
 | `master` | Refleja el código en producción (MELI PRD) | Permanente |
 | `develop` | Rama de integración para despliegues automáticos | Permanente |
-| `feature/inicXXXX` | Desarrollo de iniciativas individuales en paralelo | Temporal - Se mantiene hasta después del despliegue a PRD |
-| `feature/consolidate` | Rama de consolidación para múltiples iniciativas que van a DEV | Semi-permanente - Se recrea periódicamente |
-| `feature/inicXXXXToConsolidate` | Rama de transición para resolver conflictos antes del merge | Temporal - Se borra después del merge |
-| `feature/release-MMDD` | Consolida múltiples iniciativas listas para PRD | Temporal - Se usa solo cuando hay múltiples iniciativas |
+| `feature/inicXXXX` | Desarrollo de iniciativas individuales en paralelo | Temporal |
+| `feature/consolidate` | Rama de consolidación para múltiples iniciativas que van a DEV | Semi-permanente |
+| `feature/inicXXXXToConsolidate` | Rama de transición para resolver conflictos antes del merge | Temporal |
+| `feature/release-MMDD` | Consolida múltiples iniciativas listas para PRD | Temporal |
 
 ---
 
 ## 🔄 Flujo de Trabajo Detallado
 
-### Fase 1: Desarrollo de Iniciativa 🟠 DEV
+### Fase 1: Desarrollo de Iniciativa 🔧
 
 **1. Crear rama de iniciativa desde master**
+
 ```bash
 git checkout master
 git pull origin master
@@ -152,22 +152,25 @@ git checkout -b feature/inic1111
 
 Commits frecuentes en `feature/inic1111`
 
-**3. Cuando esté listo para MELI DEV, crear rama de transición**
+**3. Crear rama de transición**
+
 ```bash
 git checkout feature/inic1111
 git checkout -b feature/inic1111ToConsolidate
 ```
 
 **4. Resolver conflictos en la rama de transición**
+
 ```bash
 git fetch origin
 git merge origin/feature/consolidate
 # Resolver conflictos si existen
 git add .
-git commit -m "Resolve conflicts with feature/consolidate"
+git commit -m "Resolve conflicts"
 ```
 
 **5. Hacer merge a feature/consolidate**
+
 ```bash
 git checkout feature/consolidate
 git merge feature/inic1111ToConsolidate
@@ -175,18 +178,19 @@ git push origin feature/consolidate
 ```
 
 **6. Borrar rama de transición**
+
 ```bash
 git branch -d feature/inic1111ToConsolidate
 git push origin --delete feature/inic1111ToConsolidate
 ```
 
-> 💡 **Nota sobre el PR a develop:** Si ya existe un PR abierto de `feature/consolidate → develop`, simplemente actualiza la rama. Si no existe, créalo y solicita aprobación.
+> 💡 **Nota:** Si ya existe un PR abierto de `feature/consolidate → develop`, simplemente actualiza la rama. Si no existe, créalo y solicita aprobación.
 
 ---
 
-### Fase 2: Despliegue a MELI DEV 🟠 DEV
+### Fase 2: Despliegue a MELI DEV 🚀
 
-**1. Aprobar y hacer merge del PR feature/consolidate → develop**
+**1. Aprobar y hacer merge del PR**
 
 El merge dispara el despliegue automático a MELI DEV
 
@@ -200,36 +204,38 @@ Probar la funcionalidad en el ambiente de desarrollo
 
 ---
 
-### Fase 3: Transporte a MELI UAT (Para pruebas de usuario) 🟡 UAT
+### Fase 3: Transporte a MELI UAT 🧪
 
-⚠️ **Importante:** El transporte a UAT se puede realizar si no se cuenta con datos en DEV o cuando se pasa a pruebas de usuario
+> ⚠️ **Importante:** El transporte a UAT se usa para pruebas de aceptación de usuario o cuando no se cuenta con datos en ambiente MELI DEV.
 
 **1. Transportar Request ID a través de SOLMAN**
 
-Usar la herramienta SOLMAN para mover el Request ID de DEV a UAT
+Usar SOLMAN para mover el Request ID de DEV a UAT
 
 **2. Validación en MELI UAT**
 
-Realizar pruebas de aceptación de usuario
+Realizar pruebas de aceptación o validar con datos reales
 
 ---
 
-### Fase 4: Preparación para MELI PRD 🟢 PRD
+### Fase 4: Preparación para MELI PRD 📦
 
-🔀 **Decisión Importante:** ¿Una iniciativa o múltiples iniciativas van a PRD juntas?
+> 🔀 **Decisión:** ¿Una iniciativa o múltiples iniciativas van a PRD juntas?
 
-#### Escenario A: Una sola iniciativa a PRD
+#### Escenario A: Una sola iniciativa
 
-**1. Crear PR directamente desde la feature**
+**1. Crear PR directamente**
+
 ```bash
-Crear PR: feature/inic1111 → develop
+# Crear PR: feature/inic1111 → develop
 ```
 
 **2. Aprobar el PR (NO hacer merge todavía)**
 
-#### Escenario B: Múltiples iniciativas a PRD
+#### Escenario B: Múltiples iniciativas
 
-**1. Crear rama de release con fecha**
+**1. Crear rama de release**
+
 ```bash
 git checkout master
 git pull origin master
@@ -237,56 +243,55 @@ git checkout -b feature/release-1201
 # Formato: MMDD (mes y día)
 ```
 
-**2. Consolidar todas las iniciativas en la release**
+**2. Consolidar iniciativas**
+
 ```bash
 git merge feature/inic1111
 git merge feature/inic2222
-git merge feature/inic3333
-# Resolver conflictos si existen
 git push origin feature/release-1201
 ```
 
 **3. Crear PR desde la release**
-```bash
-Crear PR: feature/release-1201 → develop
-```
 
-**4. Aprobar el PR (NO hacer merge todavía)**
+```bash
+# Crear PR: feature/release-1201 → develop
+```
 
 ---
 
-### Fase 5: Despliegue a MELI PRD 🟢 PRD
+### Fase 5: Despliegue a MELI PRD ✅
 
-✅ **Flujo de Producción:** El PR aprobado pasa por DEV → UAT → PRD usando SOLMAN.
+> ✅ **Flujo de Producción:** El PR aprobado pasa por DEV → UAT → PRD usando SOLMAN.
 
-**1. El PR aprobado dispara despliegue a MELI DEV**
+**1. Despliegue a MELI DEV**
 
 Genera un nuevo Request ID
 
-**2. Transportar Request ID a MELI UAT vía SOLMAN**
+**2. Transportar a MELI UAT**
 
-Validación aislada: solo el contenido del PR, sin otras iniciativas de feature/consolidate
+Validación aislada vía SOLMAN
 
-**3. Transportar Request ID a MELI PRD vía SOLMAN**
+**3. Transportar a MELI PRD**
 
 Despliegue final a producción
 
-**4. Confirmar despliegue exitoso en PRD**
+**4. Confirmar despliegue en PRD**
 
-Validar que todo funciona correctamente
+Validar funcionamiento
 
-**5. Ejecutar el MERGE del PR a develop**
+**5. Ejecutar MERGE del PR**
 
-Ahora sí se hace el merge que estaba aprobado
+Ahora sí hacer el merge a develop
 
 **6. Actualizar master**
+
 ```bash
-# Si fue una release:
+# Release:
 git checkout master
 git merge feature/release-1201
 git push origin master
 
-# Si fue una iniciativa individual:
+# Iniciativa individual:
 git checkout master
 git merge feature/inic1111
 git push origin master
@@ -298,81 +303,33 @@ git push origin master
 
 ### 🚫 Prohibiciones Importantes
 
-- **NUNCA** hacer merge directo de `feature/inicXXXX` a `feature/consolidate` sin usar rama de transición
-- **NUNCA** hacer merge del PR a develop antes de confirmar el despliegue en PRD
-- **NUNCA** mezclar iniciativas que van a DEV con iniciativas que van directo a PRD en el mismo PR
-- **NUNCA** crear una release si solo una iniciativa va a PRD
+- **NUNCA** hacer merge directo sin rama de transición
+- **NUNCA** hacer merge del PR antes de confirmar despliegue en PRD
+- **NUNCA** mezclar iniciativas DEV con PRD en el mismo PR
+- **NUNCA** crear release para una sola iniciativa
 
 ### ✅ Mejores Prácticas
 
-- **Usar ramas de transición** (`feature/inicXXXXToConsolidate`) para resolver conflictos de manera aislada
-- **Borrar ramas de transición** inmediatamente después del merge exitoso
-- **Mantener sincronizada** la rama `feature/consolidate` con develop periódicamente
-- **Nombrar releases con fecha** en formato MMDD para facilitar el seguimiento
-- **Validar en UAT** antes de PRD cuando sea crítico
-- **Documentar Request IDs** generados por CI/CD para trazabilidad
-- **Actualizar master** inmediatamente después de confirmar despliegue en PRD
+- ✔️ Usar ramas de transición para resolver conflictos
+- ✔️ Borrar ramas de transición después del merge
+- ✔️ Mantener sincronizada feature/consolidate con develop
+- ✔️ Nombrar releases con formato MMDD
+- ✔️ Validar en UAT cuando sea necesario
+- ✔️ Documentar Request IDs para trazabilidad
+- ✔️ Actualizar master inmediatamente después de PRD
 
 ### 📋 Checklist de Despliegue a PRD
 
 - [ ] PR creado y aprobado (NO mergeado)
-- [ ] Código desplegado automáticamente a MELI DEV
+- [ ] Código desplegado a MELI DEV
 - [ ] Request ID generado por CI/CD
-- [ ] Request ID transportado a MELI UAT vía SOLMAN
+- [ ] Request ID transportado a MELI UAT
 - [ ] Validación exitosa en MELI UAT
-- [ ] Request ID transportado a MELI PRD vía SOLMAN
+- [ ] Request ID transportado a MELI PRD
 - [ ] Validación exitosa en MELI PRD
 - [ ] Merge del PR a develop ejecutado
-- [ ] Master actualizado con el contenido de la release o feature
+- [ ] Master actualizado
 - [ ] Ramas temporales borradas
-
----
-
-## 🔧 Resolución de Conflictos
-
-### Conflictos al integrar a feature/consolidate
-
-```bash
-# En la rama de transición feature/inic1111ToConsolidate
-git fetch origin
-git merge origin/feature/consolidate
-
-# Si hay conflictos:
-# 1. Revisar archivos con conflictos
-git status
-
-# 2. Editar archivos y resolver conflictos manualmente
-# 3. Agregar archivos resueltos
-git add .
-
-# 4. Completar el merge
-git commit -m "Resolve conflicts with feature/consolidate"
-
-# 5. Hacer merge limpio a feature/consolidate
-git checkout feature/consolidate
-git merge feature/inic1111ToConsolidate
-git push origin feature/consolidate
-```
-
-### Conflictos en feature/release
-
-```bash
-# Al consolidar múltiples iniciativas en la release
-git checkout feature/release-1201
-git merge feature/inic1111
-# Resolver conflictos
-git add .
-git commit -m "Merge feature/inic1111 into release"
-
-git merge feature/inic2222
-# Resolver conflictos
-git add .
-git commit -m "Merge feature/inic2222 into release"
-
-# Si el PR tiene nota "Si hay conflictos: prevalece feature/release"
-# En caso de conflictos al hacer PR a develop, siempre mantener
-# los cambios de feature/release sobre develop
-```
 
 ---
 
@@ -388,17 +345,30 @@ git commit -m "Merge feature/inic2222 into release"
 
 ---
 
-## 🎯 Diagrama de Ambientes
+## 🎯 Ambientes
 
-### Flujo de Ambientes
+```
+┌─────────────┐      ┌─────────────┐      ┌─────────────┐
+│  MELI DEV   │  →   │  MELI UAT   │  →   │  MELI PRD   │
+└─────────────┘      └─────────────┘      └─────────────┘
+```
 
-**🟠 MELI DEV → 🟡 MELI UAT → 🟢 MELI PRD**
+### 📌 Cuándo usar MELI UAT:
+
+- Para pruebas de aceptación de usuario (UAT - User Acceptance Testing)
+- Cuando MELI DEV no cuenta con los datos necesarios para validar
+
+### Descripción de Ambientes:
 
 - **MELI DEV:** Despliegue automático al hacer merge a develop. Ambiente para desarrollo y pruebas iniciales.
-- **MELI UAT:** Transporte manual vía SOLMAN. Ambiente para pruebas de aceptación de usuario. Puede contener múltiples iniciativas de feature/consolidate o validación aislada de releases.
-- **MELI PRD:** Transporte manual vía SOLMAN. Ambiente de producción. Solo se despliega después de validación exitosa en UAT.
+- **MELI UAT:** Transporte manual vía SOLMAN. Ambiente para pruebas de aceptación y validación con datos reales.
+- **MELI PRD:** Transporte manual vía SOLMAN. Ambiente de producción. Solo se despliega después de validación en UAT.
 
 ---
 
+<div align="center">
+
 **Estrategia de Branching Git - MercadoLibre**  
-Versión 2.0 - Diciembre 2024
+_Versión 2.0 - Diciembre 2024_
+
+</div>
