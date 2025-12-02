@@ -200,9 +200,9 @@ Probar la funcionalidad en el ambiente de desarrollo
 
 ---
 
-### Fase 3: Transporte a MELI UAT (Opcional) 🟡 UAT
+### Fase 3: Transporte a MELI UAT (Para pruebas de usuario) 🟡 UAT
 
-⚠️ **Importante:** El transporte a UAT es opcional y se usa cuando se necesita validación adicional antes de producción.
+⚠️ **Importante:** El transporte a UAT se puede realizar si no se cuenta con datos en DEV o cuando se pasa a pruebas de usuario
 
 **1. Transportar Request ID a través de SOLMAN**
 
