@@ -89,8 +89,8 @@ flowchart TD
     TransportPRD --> ConfirmPRD{¿Despliegue<br/>confirmado<br/>en PRD?}
     ConfirmPRD -->|Sí| MergeProd[Ejecutar MERGE de PR<br/>a develop]
     MergeProd --> CheckRelease{¿Es una<br/>release?}
-    CheckRelease -->|Sí| UpdateMasterRelease[Actualizar master<br/>desde feature/release-MMDD]
-    CheckRelease -->|No| UpdateMasterFeature[Actualizar master<br/>desde feature/inic1111]
+    CheckRelease -->|Sí| UpdateMasterRelease[Actualizar master<br/>PR feature/release-MMDD -> master]
+    CheckRelease -->|No| UpdateMasterFeature[Actualizar master<br/>PR feature/inic1111 -> master]
     UpdateMasterRelease --> End([Proceso Completado<br/>PRD Actualizado])
     UpdateMasterFeature --> End
     
