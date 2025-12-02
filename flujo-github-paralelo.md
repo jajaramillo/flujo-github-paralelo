@@ -161,17 +161,7 @@ git checkout feature/inic1111
 git checkout -b feature/inic1111ToConsolidate
 ```
 
-**4. Resolver conflictos en la rama de transición**
-
-```bash
-git fetch origin
-git merge origin/feature/consolidate
-# Resolver conflictos si existen
-git add .
-git commit -m "Resolve conflicts"
-```
-
-**5. Hacer merge a feature/consolidate**
+**4. Hacer merge a feature/consolidate**
 
 ```bash
 git checkout feature/consolidate
@@ -179,7 +169,7 @@ git merge feature/inic1111ToConsolidate
 git push origin feature/consolidate
 ```
 
-**6. Borrar rama de transición**
+**5. Borrar rama de transición**
 
 ```bash
 git branch -d feature/inic1111ToConsolidate
