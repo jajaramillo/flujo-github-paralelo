@@ -127,12 +127,14 @@ flowchart TD
 
 | Rama | Propósito | Ciclo de Vida |
 |------|-----------|---------------|
-| `master` | Refleja el código en producción (MELI PRD) | Permanente |
-| `develop` | Rama de integración para despliegues automáticos | Permanente |
+| `master` 🔒 | Refleja el código en producción (MELI PRD) | Permanente |
+| `develop` 🔒 | Rama de integración para despliegues automáticos | Permanente |
 | `feature/inicXXXX` | Desarrollo de iniciativas individuales en paralelo | Temporal |
 | `feature/consolidate` | Rama de consolidación para múltiples iniciativas que van a DEV | Semi-permanente |
 | `feature/inicXXXXToConsolidate` | Rama de transición para resolver conflictos antes del merge | Temporal |
 | `feature/release-MMDD` | Consolida múltiples iniciativas listas para PRD | Temporal |
+
+> 🔒 **Ramas Protegidas:** `master` y `develop` son ramas protegidas. Solo se pueden actualizar mediante Pull Request aprobado.
 
 ---
 
@@ -286,16 +288,18 @@ Ahora sí hacer el merge a develop
 **6. Actualizar master**
 
 ```bash
-# Release:
-git checkout master
-git merge feature/release-1201
-git push origin master
+# Crear PR para actualizar master:
 
-# Iniciativa individual:
-git checkout master
-git merge feature/inic1111
-git push origin master
+# Si fue una release:
+# PR: feature/release-1201 → master
+
+# Si fue una iniciativa individual:
+# PR: feature/inic1111 → master
+
+# Una vez aprobado y mergeado el PR, master estará actualizado
 ```
+
+> 🔒 **Nota:** Las ramas protegidas (master, develop) solo se actualizan mediante Pull Request. Nunca hacer push directo.
 
 ---
 
@@ -307,6 +311,7 @@ git push origin master
 - **NUNCA** hacer merge del PR antes de confirmar despliegue en PRD
 - **NUNCA** mezclar iniciativas DEV con PRD en el mismo PR
 - **NUNCA** crear release para una sola iniciativa
+- **NUNCA** hacer push directo a `master` o `develop` (solo mediante PR)
 
 ### ✅ Mejores Prácticas
 
