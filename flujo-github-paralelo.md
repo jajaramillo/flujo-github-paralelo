@@ -47,7 +47,7 @@ flowchart TD
     BaseLista --> PRDevExists{¿PR feature/base → develop<br/>ya existe?}
     PRDevExists -->|No| CreatePRDev[Crear PR<br/>feature/base → develop]
     PRDevExists -->|Sí| ApproveDev
-    CreatePRDev --> ApproveDev[Solicitar aprobación<br/>de PR]
+    CreatePRDev --> ApproveDev[Aprobar + Merge PR]
     ApproveDev --> DeployDev[Despliegue automático<br/>MELI DEV]
     DeployDev --> RequestIDDev[CI/CD genera<br/>Request ID]
     
@@ -72,7 +72,7 @@ flowchart TD
     
     ReleaseReady --> PRProd[Crear PR<br/>feature/release-MMDD → develop]
     
-    PRProd --> ApproveProd[Solicitar aprobación<br/>de PR]
+    PRProd --> ApproveProd[Aprobar + Merge PR]
     
     ApproveProd --> DeployDevProd[Despliegue<br/>MELI DEV]
     DeployDevProd --> RequestIDProd[CI/CD genera<br/>Request ID]
@@ -83,8 +83,7 @@ flowchart TD
     
     %% Actualización post-producción    
     TransportPRD --> ConfirmPRD{¿Despliegue<br/>confirmado<br/>en PRD?}
-    ConfirmPRD -->|Sí| MergeProd[Ejecutar MERGE de PR<br/>a develop]
-    MergeProd --> UpdateMaster[Actualizar master<br/>PR feature/release-MMDD -> master]
+    ConfirmPRD -->|Sí| UpdateMaster[Actualizar master<br/>PR feature/release-MMDD -> master]
     UpdateMaster --> End([Proceso Completado<br/>PRD Actualizado])
     
     %% Estilos
@@ -99,7 +98,7 @@ flowchart TD
     class Base,Dev1,DevN,Trans1,CreateTrans1 featureBranchStyle
     class Release,CreateRelease,MergeInit1,MergeInitN,ReleaseReady releaseBranchStyle
     class PRDevExists,CreatePRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
-    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,MergeProd,UpdateMaster prdPathStyle
+    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,UpdateMaster prdPathStyle
     class DecisionDev1,DecisionPRD1,DecisionPRDN,DecisionUAT,BaseLista decisionStyle
 ```
 
@@ -175,9 +174,9 @@ git push origin --delete feature/inic1111ToBase
 
 ### Fase 2: Despliegue a MELI DEV 🚀
 
-**1. Aprobar y hacer merge del PR**
+**1. Aprobar el PR y ejecutar el Merge**
 
-El merge dispara el despliegue automático a MELI DEV
+La aprobación permite hacer el merge. El merge dispara el despliegue automático a MELI DEV.
 
 **2. CI/CD genera Request ID automáticamente**
 
@@ -235,17 +234,19 @@ git push origin feature/release-1201
 # Crear PR: feature/release-1201 → develop
 ```
 
-**4. Aprobar el PR (NO hacer merge todavía)**
+**4. Aprobar el PR y ejecutar el Merge**
+
+El merge dispara el despliegue a MELI DEV y genera el Request ID para transportar a UAT y PRD.
 
 ---
 
 ### Fase 5: Despliegue a MELI PRD ✅
 
-> ✅ **Flujo de Producción:** El PR aprobado pasa por DEV → UAT → PRD usando SOLMAN.
+> ✅ **Flujo de Producción:** El código desplegado en DEV se transporta a UAT → PRD usando SOLMAN.
 
-**1. Despliegue a MELI DEV**
+**1. Verificar despliegue en MELI DEV**
 
-Genera un nuevo Request ID
+El merge de la Fase 4 generó un Request ID automáticamente.
 
 **2. Transportar a MELI UAT**
 
@@ -259,11 +260,7 @@ Despliegue final a producción
 
 Validar funcionamiento
 
-**5. Ejecutar MERGE del PR**
-
-Ahora sí hacer el merge a develop
-
-**6. Actualizar master**
+**5. Actualizar master**
 
 ```bash
 # Crear PR para actualizar master:
@@ -281,7 +278,6 @@ Ahora sí hacer el merge a develop
 ### 🚫 Prohibiciones Importantes
 
 - **NUNCA** hacer merge directo sin rama de transición
-- **NUNCA** hacer merge del PR antes de confirmar despliegue en PRD
 - **NUNCA** mezclar iniciativas DEV con PRD en el mismo PR
 - **NUNCA** hacer push directo a `master` o `develop` (solo mediante PR)
 - **NUNCA** pasar a PRD sin crear una rama release
@@ -301,14 +297,13 @@ Ahora sí hacer el merge a develop
 
 - [ ] Rama release creada (feature/release-MMDD)
 - [ ] Iniciativa(s) consolidada(s) en release
-- [ ] PR creado y aprobado (NO mergeado)
+- [ ] PR creado, aprobado y mergeado a develop
 - [ ] Código desplegado a MELI DEV
 - [ ] Request ID generado por CI/CD
 - [ ] Request ID transportado a MELI UAT
 - [ ] Validación exitosa en MELI UAT
 - [ ] Request ID transportado a MELI PRD
 - [ ] Validación exitosa en MELI PRD
-- [ ] Merge del PR a develop ejecutado
 - [ ] Master actualizado (PR release → master)
 - [ ] Ramas temporales borradas
 
