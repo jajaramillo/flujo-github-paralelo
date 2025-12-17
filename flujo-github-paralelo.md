@@ -60,17 +60,17 @@ flowchart TD
     Dev1 --> DecisionPRD1{¿Listo para<br/>MELI PRD?}
     DevN --> DecisionPRDN{¿Listo para<br/>MELI PRD?}
     
-    DecisionPRD1 -->|Sí| CreateRelease[Crear feature/release-MMDD<br/>desde master]
+    DecisionPRD1 -->|Sí| CreateRelease[Crear feature/release-DDMM<br/>desde master]
     DecisionPRDN -->|Sí| CreateRelease
     
-    CreateRelease --> Release[feature/release-MMDD]
-    Release --> MergeInit1[Merge feature/inic1111<br/>→ feature/release-MMDD]
-    Release --> MergeInitN[Merge feature/inicXXXX<br/>→ feature/release-MMDD]
+    CreateRelease --> Release[feature/release-DDMM]
+    Release --> MergeInit1[Merge feature/inic1111<br/>→ feature/release-DDMM]
+    Release --> MergeInitN[Merge feature/inicXXXX<br/>→ feature/release-DDMM]
     
     MergeInit1 --> ReleaseReady
-    MergeInitN --> ReleaseReady{feature/release-MMDD<br/>consolidada}
+    MergeInitN --> ReleaseReady{feature/release-DDMM<br/>consolidada}
     
-    ReleaseReady --> PRProd[Crear PR<br/>feature/release-MMDD → develop]
+    ReleaseReady --> PRProd[Crear PR<br/>feature/release-DDMM → develop]
     
     PRProd --> ApproveProd[Aprobar + Merge PR]
     
@@ -83,7 +83,7 @@ flowchart TD
     
     %% Actualización post-producción    
     TransportPRD --> ConfirmPRD{¿Despliegue<br/>confirmado<br/>en PRD?}
-    ConfirmPRD -->|Sí| UpdateMaster[Actualizar master<br/>PR feature/release-MMDD -> master]
+    ConfirmPRD -->|Sí| UpdateMaster[Actualizar master<br/>PR feature/release-DDMM -> master]
     UpdateMaster --> End([Proceso Completado<br/>PRD Actualizado])
     
     %% Estilos
@@ -108,7 +108,7 @@ flowchart TD
 |-------|-------------|
 | 🔴 **Rojo** | Ramas principales (master) |
 | 🟣 **Morado** | Ramas feature (feature/inic*, feature/*ToBase) |
-| 🔵 **Azul claro** | Ramas release/base (feature/release-MMDD, feature/base) |
+| 🔵 **Azul claro** | Ramas release/base (feature/release-DDMM, feature/base) |
 | 🟠 **Naranja** | Flujo DEV - Despliegue a MELI DEV/UAT |
 | 🟢 **Verde** | Flujo PRD - Despliegue a MELI PRD |
 | ⚪ **Gris** | Decisiones y puntos de control |
@@ -124,7 +124,7 @@ flowchart TD
 | `feature/inicXXXX` | Desarrollo de iniciativas individuales en paralelo | Temporal |
 | `feature/base` | Rama de consolidación para múltiples iniciativas que van a DEV | Semi-permanente |
 | `feature/inicXXXXToBase` | Rama de transición para resolver conflictos antes del merge | Temporal |
-| `feature/release-MMDD` | Consolida iniciativas listas para PRD (siempre requerida) | Temporal |
+| `feature/release-DDMM` | Consolida iniciativas listas para PRD (siempre requerida) | Temporal |
 
 > 🔒 **Ramas Protegidas:** `master` y `develop` son ramas protegidas. Solo se pueden actualizar mediante Pull Request aprobado.
 
@@ -212,7 +212,7 @@ Realizar pruebas de aceptación o validar con datos reales
 git checkout master
 git pull origin master
 git checkout -b feature/release-1201
-# Formato: MMDD (mes y día)
+# Formato: DDMM (día y mes)
 ```
 
 **2. Consolidar iniciativa(s)**
@@ -264,7 +264,7 @@ Validar funcionamiento
 
 ```bash
 # Crear PR para actualizar master:
-# PR: feature/release-MMDD → master
+# PR: feature/release-DDMM → master
 
 # Una vez aprobado y mergeado el PR, master estará actualizado
 ```
@@ -287,7 +287,7 @@ Validar funcionamiento
 - ✔️ Usar ramas de transición para resolver conflictos
 - ✔️ Borrar ramas de transición después del merge
 - ✔️ Mantener sincronizada feature/base con develop
-- ✔️ Nombrar releases con formato MMDD
+- ✔️ Nombrar releases con formato DDMM
 - ✔️ Siempre crear rama release para despliegues a PRD
 - ✔️ Validar en UAT cuando sea necesario
 - ✔️ Documentar Request IDs para trazabilidad
@@ -295,7 +295,7 @@ Validar funcionamiento
 
 ### 📋 Checklist de Despliegue a PRD
 
-- [ ] Rama release creada (feature/release-MMDD)
+- [ ] Rama release creada (feature/release-DDMM)
 - [ ] Iniciativa(s) consolidada(s) en release
 - [ ] PR creado, aprobado y mergeado a develop
 - [ ] Código desplegado a MELI DEV
@@ -316,7 +316,7 @@ Validar funcionamiento
 | Iniciativa | `feature/inicXXXX` | `feature/inic1111` |
 | Transición | `feature/inicXXXXToBase` | `feature/inic1111ToBase` |
 | Base | `feature/base` | `feature/base` |
-| Release | `feature/release-MMDD` | `feature/release-1201` |
+| Release | `feature/release-DDMM` | `feature/release-1201` |
 | Request ID | Generado por CI/CD | REQ-2024-001234 |
 
 ---
