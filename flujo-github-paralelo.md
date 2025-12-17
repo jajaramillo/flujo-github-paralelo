@@ -345,6 +345,6 @@ Validar funcionamiento
 <div align="center">
 
 **Estrategia de Branching Git - MercadoLibre**  
-_Versión 2.1 - Diciembre 2024_
+_Versión 2.1 - Diciembre 2025_
 
 </div>
