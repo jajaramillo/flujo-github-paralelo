@@ -25,27 +25,27 @@ flowchart TD
     Start([Inicio:<br/>Código en Producción]) --> Master[Rama MASTER<br/>Código actual en PRD]
     
     
-    Master --> CreateBase[Crear feature/consolidate<br/>desde master]
+    Master --> CreateBase[Crear feature/base<br/>desde master]
     Master --> CreateDev1[Crear feature/inic1111<br/>desde master]    
     Master --> CreateDevN[Crear feature/inicXXXX<br/>desde master]
        
-    CreateBase --> Base[feature/consolidate]
+    CreateBase --> Base[feature/base]
     CreateDev1 --> Dev1[feature/inic1111<br/>Desarrollo en paralelo]    
     CreateDevN --> DevN[feature/inicXXXX<br/>Desarrollo en paralelo<br/>Mismo Flujo feature/inic1111]
     
     %% Flujo para MELI DEV
     Dev1 --> DecisionDev1{¿Listo para<br/>MELI DEV?}
-    DecisionDev1 -->|Sí| CreateTrans1[Crear feature/inic1111ToConsolidate<br/>desde feature/inic1111]
-    CreateTrans1 --> Trans1[feature/inic1111ToConsolidate<br/>Rama de transición]
-    Trans1 --> MergeToConsolidate1[Merge feature/inic1111ToConsolidate<br/>→ feature/consolidate]
+    DecisionDev1 -->|Sí| CreateTrans1[Crear feature/inic1111ToBase<br/>desde feature/inic1111]
+    CreateTrans1 --> Trans1[feature/inic1111ToBase<br/>Rama de transición]
+    Trans1 --> MergeToBase1[Merge feature/inic1111ToBase<br/>→ feature/base]
     
           
     Base --> BaseLista
-    MergeToConsolidate1 --> BaseLista{feature/consolidate<br/>actualizada}
-    MergeToConsolidate1 --> DeleteTrans1[Borrar<br/>feature/inic1111ToConsolidate]
+    MergeToBase1 --> BaseLista{feature/base<br/>actualizada}
+    MergeToBase1 --> DeleteTrans1[Borrar<br/>feature/inic1111ToBase]
     
-    BaseLista --> PRDevExists{¿PR feature/consolidate → develop<br/>ya existe?}
-    PRDevExists -->|No| CreatePRDev[Crear PR<br/>feature/consolidate → develop]
+    BaseLista --> PRDevExists{¿PR feature/base → develop<br/>ya existe?}
+    PRDevExists -->|No| CreatePRDev[Crear PR<br/>feature/base → develop]
     PRDevExists -->|Sí| ApproveDev
     CreatePRDev --> ApproveDev[Solicitar aprobación<br/>de PR]
     ApproveDev --> DeployDev[Despliegue automático<br/>MELI DEV]
@@ -60,11 +60,8 @@ flowchart TD
     Dev1 --> DecisionPRD1{¿Listo para<br/>MELI PRD?}
     DevN --> DecisionPRDN{¿Listo para<br/>MELI PRD?}
     
-    DecisionPRD1 -->|Sí| CheckMultiple{¿Múltiples<br/>iniciativas<br/>a PRD?}
-    DecisionPRDN -->|Sí| CheckMultiple
-    
-    CheckMultiple -->|No - Una sola| PRProdSingle[Crear PR<br/>feature/inic1111 → develop]
-    CheckMultiple -->|Sí - Varias| CreateRelease[Crear feature/release-MMDD<br/>desde master]
+    DecisionPRD1 -->|Sí| CreateRelease[Crear feature/release-MMDD<br/>desde master]
+    DecisionPRDN -->|Sí| CreateRelease
     
     CreateRelease --> Release[feature/release-MMDD]
     Release --> MergeInit1[Merge feature/inic1111<br/>→ feature/release-MMDD]
@@ -73,10 +70,9 @@ flowchart TD
     MergeInit1 --> ReleaseReady
     MergeInitN --> ReleaseReady{feature/release-MMDD<br/>consolidada}
     
-    ReleaseReady --> PRProdMulti[Crear PR<br/>feature/release-MMDD → develop]
+    ReleaseReady --> PRProd[Crear PR<br/>feature/release-MMDD → develop]
     
-    PRProdSingle --> ApproveProd
-    PRProdMulti --> ApproveProd[Solicitar aprobación<br/>de PR]
+    PRProd --> ApproveProd[Solicitar aprobación<br/>de PR]
     
     ApproveProd --> DeployDevProd[Despliegue<br/>MELI DEV]
     DeployDevProd --> RequestIDProd[CI/CD genera<br/>Request ID]
@@ -88,11 +84,8 @@ flowchart TD
     %% Actualización post-producción    
     TransportPRD --> ConfirmPRD{¿Despliegue<br/>confirmado<br/>en PRD?}
     ConfirmPRD -->|Sí| MergeProd[Ejecutar MERGE de PR<br/>a develop]
-    MergeProd --> CheckRelease{¿Es una<br/>release?}
-    CheckRelease -->|Sí| UpdateMasterRelease[Actualizar master<br/>PR feature/release-MMDD -> master]
-    CheckRelease -->|No| UpdateMasterFeature[Actualizar master<br/>PR feature/inic1111 -> master]
-    UpdateMasterRelease --> End([Proceso Completado<br/>PRD Actualizado])
-    UpdateMasterFeature --> End
+    MergeProd --> UpdateMaster[Actualizar master<br/>PR feature/release-MMDD -> master]
+    UpdateMaster --> End([Proceso Completado<br/>PRD Actualizado])
     
     %% Estilos
     classDef mainBranchStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
@@ -106,7 +99,7 @@ flowchart TD
     class Base,Dev1,DevN,Trans1,CreateTrans1 featureBranchStyle
     class Release,CreateRelease,MergeInit1,MergeInitN,ReleaseReady releaseBranchStyle
     class PRDevExists,CreatePRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
-    class CheckMultiple,PRProdSingle,PRProdMulti,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,MergeProd,CheckRelease,UpdateMasterRelease,UpdateMasterFeature prdPathStyle
+    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,MergeProd,UpdateMaster prdPathStyle
     class DecisionDev1,DecisionPRD1,DecisionPRDN,DecisionUAT,BaseLista decisionStyle
 ```
 
@@ -115,8 +108,8 @@ flowchart TD
 | Color | Descripción |
 |-------|-------------|
 | 🔴 **Rojo** | Ramas principales (master) |
-| 🟣 **Morado** | Ramas feature (feature/inic*, feature/*ToConsolidate) |
-| 🔵 **Azul claro** | Ramas release/consolidate (feature/release-MMDD, feature/consolidate) |
+| 🟣 **Morado** | Ramas feature (feature/inic*, feature/*ToBase) |
+| 🔵 **Azul claro** | Ramas release/base (feature/release-MMDD, feature/base) |
 | 🟠 **Naranja** | Flujo DEV - Despliegue a MELI DEV/UAT |
 | 🟢 **Verde** | Flujo PRD - Despliegue a MELI PRD |
 | ⚪ **Gris** | Decisiones y puntos de control |
@@ -130,9 +123,9 @@ flowchart TD
 | `master` 🔒 | Refleja el código en producción (MELI PRD) | Permanente |
 | `develop` 🔒 | Rama de integración para despliegues automáticos | Permanente |
 | `feature/inicXXXX` | Desarrollo de iniciativas individuales en paralelo | Temporal |
-| `feature/consolidate` | Rama de consolidación para múltiples iniciativas que van a DEV | Semi-permanente |
-| `feature/inicXXXXToConsolidate` | Rama de transición para resolver conflictos antes del merge | Temporal |
-| `feature/release-MMDD` | Consolida múltiples iniciativas listas para PRD | Temporal |
+| `feature/base` | Rama de consolidación para múltiples iniciativas que van a DEV | Semi-permanente |
+| `feature/inicXXXXToBase` | Rama de transición para resolver conflictos antes del merge | Temporal |
+| `feature/release-MMDD` | Consolida iniciativas listas para PRD (siempre requerida) | Temporal |
 
 > 🔒 **Ramas Protegidas:** `master` y `develop` son ramas protegidas. Solo se pueden actualizar mediante Pull Request aprobado.
 
@@ -158,25 +151,25 @@ Commits frecuentes en `feature/inic1111`
 
 ```bash
 git checkout feature/inic1111
-git checkout -b feature/inic1111ToConsolidate
+git checkout -b feature/inic1111ToBase
 ```
 
-**4. Hacer merge a feature/consolidate**
+**4. Hacer merge a feature/base**
 
 ```bash
-git checkout feature/consolidate
-git merge feature/inic1111ToConsolidate
-git push origin feature/consolidate
+git checkout feature/base
+git merge feature/inic1111ToBase
+git push origin feature/base
 ```
 
 **5. Borrar rama de transición**
 
 ```bash
-git branch -d feature/inic1111ToConsolidate
-git push origin --delete feature/inic1111ToConsolidate
+git branch -d feature/inic1111ToBase
+git push origin --delete feature/inic1111ToBase
 ```
 
-> 💡 **Nota:** Si ya existe un PR abierto de `feature/consolidate → develop`, simplemente actualiza la rama. Si no existe, créalo y solicita aprobación.
+> 💡 **Nota:** Si ya existe un PR abierto de `feature/base → develop`, simplemente actualiza la rama. Si no existe, créalo y solicita aprobación.
 
 ---
 
@@ -212,19 +205,7 @@ Realizar pruebas de aceptación o validar con datos reales
 
 ### Fase 4: Preparación para MELI PRD 📦
 
-> 🔀 **Decisión:** ¿Una iniciativa o múltiples iniciativas van a PRD juntas?
-
-#### Escenario A: Una sola iniciativa
-
-**1. Crear PR directamente**
-
-```bash
-# Crear PR: feature/inic1111 → develop
-```
-
-**2. Aprobar el PR (NO hacer merge todavía)**
-
-#### Escenario B: Múltiples iniciativas
+> 📦 **Importante:** Siempre se debe crear una rama release para pasar a producción, independientemente de si es una o múltiples iniciativas.
 
 **1. Crear rama de release**
 
@@ -235,9 +216,14 @@ git checkout -b feature/release-1201
 # Formato: MMDD (mes y día)
 ```
 
-**2. Consolidar iniciativas**
+**2. Consolidar iniciativa(s)**
 
 ```bash
+# Para una iniciativa:
+git merge feature/inic1111
+git push origin feature/release-1201
+
+# Para múltiples iniciativas:
 git merge feature/inic1111
 git merge feature/inic2222
 git push origin feature/release-1201
@@ -248,6 +234,8 @@ git push origin feature/release-1201
 ```bash
 # Crear PR: feature/release-1201 → develop
 ```
+
+**4. Aprobar el PR (NO hacer merge todavía)**
 
 ---
 
@@ -279,12 +267,7 @@ Ahora sí hacer el merge a develop
 
 ```bash
 # Crear PR para actualizar master:
-
-# Si fue una release:
-# PR: feature/release-1201 → master
-
-# Si fue una iniciativa individual:
-# PR: feature/inic1111 → master
+# PR: feature/release-MMDD → master
 
 # Una vez aprobado y mergeado el PR, master estará actualizado
 ```
@@ -300,21 +283,24 @@ Ahora sí hacer el merge a develop
 - **NUNCA** hacer merge directo sin rama de transición
 - **NUNCA** hacer merge del PR antes de confirmar despliegue en PRD
 - **NUNCA** mezclar iniciativas DEV con PRD en el mismo PR
-- **NUNCA** crear release para una sola iniciativa
 - **NUNCA** hacer push directo a `master` o `develop` (solo mediante PR)
+- **NUNCA** pasar a PRD sin crear una rama release
 
 ### ✅ Mejores Prácticas
 
 - ✔️ Usar ramas de transición para resolver conflictos
 - ✔️ Borrar ramas de transición después del merge
-- ✔️ Mantener sincronizada feature/consolidate con develop
+- ✔️ Mantener sincronizada feature/base con develop
 - ✔️ Nombrar releases con formato MMDD
+- ✔️ Siempre crear rama release para despliegues a PRD
 - ✔️ Validar en UAT cuando sea necesario
 - ✔️ Documentar Request IDs para trazabilidad
 - ✔️ Actualizar master inmediatamente después de PRD
 
 ### 📋 Checklist de Despliegue a PRD
 
+- [ ] Rama release creada (feature/release-MMDD)
+- [ ] Iniciativa(s) consolidada(s) en release
 - [ ] PR creado y aprobado (NO mergeado)
 - [ ] Código desplegado a MELI DEV
 - [ ] Request ID generado por CI/CD
@@ -323,7 +309,7 @@ Ahora sí hacer el merge a develop
 - [ ] Request ID transportado a MELI PRD
 - [ ] Validación exitosa en MELI PRD
 - [ ] Merge del PR a develop ejecutado
-- [ ] Master actualizado
+- [ ] Master actualizado (PR release → master)
 - [ ] Ramas temporales borradas
 
 ---
@@ -333,8 +319,8 @@ Ahora sí hacer el merge a develop
 | Tipo | Formato | Ejemplo |
 |------|---------|---------|
 | Iniciativa | `feature/inicXXXX` | `feature/inic1111` |
-| Transición | `feature/inicXXXXToConsolidate` | `feature/inic1111ToConsolidate` |
-| Consolidación | `feature/consolidate` | `feature/consolidate` |
+| Transición | `feature/inicXXXXToBase` | `feature/inic1111ToBase` |
+| Base | `feature/base` | `feature/base` |
 | Release | `feature/release-MMDD` | `feature/release-1201` |
 | Request ID | Generado por CI/CD | REQ-2024-001234 |
 
@@ -364,6 +350,6 @@ Ahora sí hacer el merge a develop
 <div align="center">
 
 **Estrategia de Branching Git - MercadoLibre**  
-_Versión 2.0 - Diciembre 2024_
+_Versión 2.1 - Diciembre 2024_
 
 </div>
