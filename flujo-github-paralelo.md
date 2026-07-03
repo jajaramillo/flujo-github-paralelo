@@ -72,7 +72,14 @@ flowchart TD
     
     ReleaseReady --> PRProd[Crear PR<br/>feature/release-DDMM → develop]
     
-    PRProd --> ApproveProd[Aprobar + Merge PR]
+    PRProd --> ConflictCheck{¿Conflictos en PR<br/>feature/release → develop?}
+    ConflictCheck -->|No| ApproveProd[Aprobar + Merge PR]
+    ConflictCheck -->|Sí| CreateReleaseTrans[Crear release-DDMMToDevelop<br/>desde feature/release-DDMM<br/>⚠️ Sin prefijo feature/]
+    CreateReleaseTrans --> ReleaseTrans[release-DDMMToDevelop<br/>Resolver conflictos sin omitir<br/>ningún cambio de develop]
+    ReleaseTrans --> ApproveMergeReleaseTrans[Aprobar + Merge PR<br/>release-DDMMToDevelop → develop]
+    ApproveMergeReleaseTrans --> SmallChange[Aplicar pequeño cambio<br/>en feature/release-DDMM]
+    SmallChange --> RetryPR[Nuevo PR<br/>feature/release-DDMM → develop]
+    RetryPR --> ApproveProd
     
     ApproveProd --> DeployDevProd[Despliegue<br/>MELI DEV]
     DeployDevProd --> RequestIDProd[CI/CD genera<br/>Request ID]
@@ -83,8 +90,11 @@ flowchart TD
     
     %% Actualización post-producción    
     TransportPRD --> ConfirmPRD{¿Despliegue<br/>confirmado<br/>en PRD?}
-    ConfirmPRD -->|Sí| UpdateMaster[Actualizar master<br/>PR feature/release-DDMM -> master]
-    UpdateMaster --> End([Proceso Completado<br/>PRD Actualizado])
+    ConfirmPRD -->|Sí| PRMasterStable[Crear PR<br/>master → master-stable<br/>Imagen PRD antes de cambios]
+    PRMasterStable --> ApproveMasterStable[Aprobar + Merge PR<br/>master → master-stable]
+    ApproveMasterStable --> UpdateMaster[Crear PR<br/>feature/release-DDMM → master]
+    UpdateMaster --> ApproveMergeMaster[Aprobar + Merge PR<br/>feature/release-DDMM → master]
+    ApproveMergeMaster --> End([Proceso Completado<br/>PRD Actualizado])
     
     %% Estilos
     classDef mainBranchStyle fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
@@ -98,8 +108,10 @@ flowchart TD
     class Base,Dev1,DevN,Trans1,CreateTrans1 featureBranchStyle
     class Release,CreateRelease,MergeInit1,MergeInitN,ReleaseReady releaseBranchStyle
     class PRDevExists,CreatePRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
-    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,UpdateMaster prdPathStyle
-    class DecisionDev1,DecisionPRD1,DecisionPRDN,DecisionUAT,BaseLista decisionStyle
+    class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,PRMasterStable,ApproveMasterStable,UpdateMaster,ApproveMergeMaster prdPathStyle
+    class CreateReleaseTrans,ReleaseTrans,SmallChange,RetryPR featureBranchStyle
+    class ApproveMergeReleaseTrans prdPathStyle
+    class DecisionDev1,DecisionPRD1,DecisionPRDN,DecisionUAT,BaseLista,ConflictCheck decisionStyle
 ```
 
 ### 🎨 Leyenda de Colores
@@ -120,6 +132,7 @@ flowchart TD
 | Rama | Propósito | Ciclo de Vida |
 |------|-----------|---------------|
 | `master` 🔒 | Refleja el código en producción (MELI PRD) | Permanente |
+| `master-stable` 🔒 | Imagen del estado de PRD antes de cada despliegue (snapshot previo) | Permanente |
 | `develop` 🔒 | Rama de integración para despliegues automáticos | Permanente |
 | `feature/inicXXXX` | Desarrollo de iniciativas individuales en paralelo | Temporal |
 | `feature/base` | Rama de consolidación para múltiples iniciativas que van a DEV | Semi-permanente |
@@ -234,7 +247,49 @@ git push origin feature/release-1201
 # Crear PR: feature/release-1201 → develop
 ```
 
-**4. Aprobar el PR y ejecutar el Merge**
+**4. Resolver conflictos (si aplica)**
+
+> ⚠️ **Importante:** Si el PR presenta conflictos, **no resolver directamente sobre el PR**. Seguir el flujo de rama temporal para garantizar que lo que va a PRD sea exactamente lo que contiene la release.
+
+```bash
+# Crear rama temporal desde develop (SIN prefijo feature/ para no disparar CI/CD)
+git checkout develop
+git pull origin develop
+git checkout -b release-1201ToDevelop
+
+# Mergear la release sobre la rama temporal y resolver conflictos
+git merge feature/release-1201
+# ⚠️ Resolver conflictos sin omitir NINGÚN cambio de develop
+# Priorizar los cambios de develop para evitar pérdida de información
+git add .
+git commit -m "Resolve conflicts: release-1201 vs develop"
+git push origin release-1201ToDevelop
+```
+
+```bash
+# Volver a feature/release-1201 y aplicar un pequeño cambio (ej: espacio, comentario)
+# para que GitHub reconozca el PR actualizado sin conflictos
+git checkout feature/release-1201
+# Aplicar cambio menor (ej: actualizar fecha en encabezado, agregar línea en blanco)
+git add .
+git commit -m "Minor adjustment to re-trigger PR without conflicts"
+git push origin feature/release-1201
+```
+
+Una vez resueltos los conflictos, crear un PR de `release-1201ToDevelop → develop`, aprobarlo y mergearlo.
+
+Después de ese merge, eliminar la rama temporal:
+
+```bash
+git branch -d release-1201ToDevelop
+git push origin --delete release-1201ToDevelop
+```
+
+El PR `feature/release-1201 → develop` ya no debería tener conflictos.
+
+> 💡 **Por qué este flujo:** La rama temporal `release-DDMMToDevelop` absorbe todos los cambios de `develop`, asegurando que nada se pierda. Al actualizar `feature/release-DDMM` con un cambio mínimo, el PR queda limpio y lo que se despliega a PRD corresponde exactamente al contenido de la release.
+
+**5. Aprobar el PR y ejecutar el Merge**
 
 El merge dispara el despliegue a MELI DEV y genera el Request ID para transportar a UAT y PRD.
 
@@ -260,16 +315,23 @@ Despliegue final a producción
 
 Validar funcionamiento
 
-**5. Actualizar master**
+**5. Generar snapshot de PRD en master-stable**
+
+> 📸 **Importante:** Antes de actualizar `master`, se debe crear un PR de `master → master-stable`. Esto permite conservar una imagen del estado de PRD *antes* de los cambios transportados, útil para rollback o comparación.
 
 ```bash
-# Crear PR para actualizar master:
-# PR: feature/release-DDMM → master
-
-# Una vez aprobado y mergeado el PR, master estará actualizado
+# Crear PR: master → master-stable
+# Aprobar y mergear para capturar el estado actual de PRD
 ```
 
-> 🔒 **Nota:** Las ramas protegidas (master, develop) solo se actualizan mediante Pull Request. Nunca hacer push directo.
+**6. Actualizar master**
+
+```bash
+# Crear PR: feature/release-DDMM → master
+# Aprobar y mergear el PR → master estará actualizado
+```
+
+> 🔒 **Nota:** Las ramas protegidas (master, master-stable, develop) solo se actualizan mediante Pull Request. Nunca hacer push directo.
 
 ---
 
@@ -278,6 +340,9 @@ Validar funcionamiento
 ### 🚫 Prohibiciones Importantes
 
 - **NUNCA** hacer merge directo sin rama de transición
+- **NUNCA** resolver conflictos del PR release directamente: siempre usar rama `release-DDMMToDevelop`
+- **NUNCA** omitir cambios de `develop` al resolver conflictos en la rama temporal (riesgo de pérdida de información)
+- **NUNCA** usar el prefijo `feature/` en la rama temporal de resolución (dispara CI/CD innecesariamente)
 - **NUNCA** mezclar iniciativas DEV con PRD en el mismo PR
 - **NUNCA** hacer push directo a `master` o `develop` (solo mediante PR)
 - **NUNCA** pasar a PRD sin crear una rama release
@@ -304,6 +369,7 @@ Validar funcionamiento
 - [ ] Validación exitosa en MELI UAT
 - [ ] Request ID transportado a MELI PRD
 - [ ] Validación exitosa en MELI PRD
+- [ ] PR master → master-stable aprobado y mergeado (snapshot previo a cambios)
 - [ ] Master actualizado (PR release → master)
 - [ ] Ramas temporales borradas
 
@@ -317,6 +383,7 @@ Validar funcionamiento
 | Transición | `feature/inicXXXXToBase` | `feature/inic1111ToBase` |
 | Base | `feature/base` | `feature/base` |
 | Release | `feature/release-DDMM` | `feature/release-1201` |
+| Release (temporal conflictos) | `release-DDMMToDevelop` | `release-1201ToDevelop` |
 | Request ID | Generado por CI/CD | REQ-2024-001234 |
 
 ---
@@ -345,6 +412,6 @@ Validar funcionamiento
 <div align="center">
 
 **Estrategia de Branching Git - MercadoLibre**  
-_Versión 2.1 - Diciembre 2025_
+_Versión 3 - Julio 2026_
 
 </div>
