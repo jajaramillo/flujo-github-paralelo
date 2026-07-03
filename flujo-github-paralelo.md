@@ -35,14 +35,16 @@ flowchart TD
     
     %% Flujo para MELI DEV
     Dev1 --> DecisionDev1{¿Listo para<br/>MELI DEV?}
-    DecisionDev1 -->|Sí| CreateTrans1[Crear feature/inic1111ToBase<br/>desde feature/inic1111]
-    CreateTrans1 --> Trans1[feature/inic1111ToBase<br/>Rama de transición]
+    DecisionDev1 -->|Sí| ConflictBase{¿Conflictos al<br/>mergear a feature/base?}
+    ConflictBase -->|No| MergeDirectBase[Merge feature/inic1111<br/>→ feature/base directo]
+    ConflictBase -->|Sí| CreateTrans1[Crear feature/inic1111ToBase<br/>desde feature/inic1111]
+    CreateTrans1 --> Trans1[feature/inic1111ToBase<br/>Resolver conflictos]
     Trans1 --> MergeToBase1[Merge feature/inic1111ToBase<br/>→ feature/base]
-    
-          
-    Base --> BaseLista
-    MergeToBase1 --> BaseLista{feature/base<br/>actualizada}
     MergeToBase1 --> DeleteTrans1[Borrar<br/>feature/inic1111ToBase]
+
+    Base --> BaseLista
+    MergeDirectBase --> BaseLista
+    MergeToBase1 --> BaseLista{feature/base<br/>actualizada}
     
     BaseLista --> PRDevExists{¿PR feature/base → develop<br/>ya existe?}
     PRDevExists -->|No| CreatePRDev[Crear PR<br/>feature/base → develop]
@@ -105,7 +107,7 @@ flowchart TD
     classDef decisionStyle fill:#f8f9fa,stroke:#495057,stroke-width:2px,color:#000
     
     class Master mainBranchStyle
-    class Base,Dev1,DevN,Trans1,CreateTrans1 featureBranchStyle
+    class Base,Dev1,DevN,Trans1,CreateTrans1,MergeDirectBase featureBranchStyle
     class Release,CreateRelease,MergeInit1,MergeInitN,ReleaseReady releaseBranchStyle
     class PRDevExists,CreatePRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
     class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,PRMasterStable,ApproveMasterStable,UpdateMaster,ApproveMergeMaster prdPathStyle
