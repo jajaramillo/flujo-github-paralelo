@@ -12,6 +12,7 @@
   - [Fase 3: MELI UAT](#fase-3-transporte-a-meli-uat-)
   - [Fase 4: Preparación PRD](#fase-4-preparación-para-meli-prd-)
   - [Fase 5: MELI PRD](#fase-5-despliegue-a-meli-prd-)
+- [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales)
 - [Reglas y Prácticas](#️-reglas-y-mejores-prácticas)
 - [Nomenclatura](#-convenciones-de-nomenclatura)
 - [Ambientes](#-ambientes)
@@ -34,22 +35,28 @@ flowchart TD
 
     %% Flujo para MELI DEV
     Dev1 --> DecisionDev1{¿Listo para<br/>MELI DEV?}
-    DecisionDev1 -->|Sí| ConflictBase{¿Conflictos al<br/>mergear a feature/base?}
+    DecisionDev1 -->|Sí| ConflictBase{¿Conflictos o commits<br/>históricos sin firma?}
     ConflictBase -->|No| MergeDirectBase[PR feature/inic1111<br/>→ feature/base]
     ConflictBase -->|Sí| CreateTrans1[Desde feature/base crear<br/>feature/inic1111ToBase]
     CreateTrans1 --> Trans1[Merge firmado de feature/inic1111<br/>dentro de inic1111ToBase<br/>Resolver conflictos]
-    Trans1 --> MergeToBase1[PR feature/inic1111ToBase<br/>→ feature/base]
+    Trans1 --> SignTrans1{¿El rango del PR tiene<br/>commits sin firma?}
+    SignTrans1 -->|Sí| RebaseTrans1[Rebase + refirma sobre<br/>origin/feature/base]
+    SignTrans1 -->|No| MergeToBase1
+    RebaseTrans1 --> MergeToBase1[PR feature/inic1111ToBase<br/>→ feature/base]
     MergeToBase1 --> DeleteTrans1[Borrar<br/>feature/inic1111ToBase]
 
     Base --> BaseLista
     MergeDirectBase --> BaseLista
     MergeToBase1 --> BaseLista{feature/base<br/>actualizada}
 
-    BaseLista --> ConflictDevelop{¿Conflictos<br/>feature/base → develop?}
+    BaseLista --> ConflictDevelop{¿Conflictos o commits sin firma<br/>feature/base → develop?}
     ConflictDevelop -->|No| CreatePRDev[Crear PR<br/>feature/base → develop]
     ConflictDevelop -->|Sí| CreateBaseTrans[Desde develop crear<br/>feature/baseToDevelop]
     CreateBaseTrans --> BaseTrans[Merge firmado de feature/base<br/>dentro de baseToDevelop<br/>Resolver conflictos]
-    BaseTrans --> PRBaseTrans[Crear PR<br/>feature/baseToDevelop → develop]
+    BaseTrans --> SignBaseTrans{¿El rango del PR tiene<br/>commits sin firma?}
+    SignBaseTrans -->|Sí| RebaseBaseTrans[Rebase + refirma sobre<br/>origin/develop]
+    SignBaseTrans -->|No| PRBaseTrans
+    RebaseBaseTrans --> PRBaseTrans[Crear PR<br/>feature/baseToDevelop → develop]
     CreatePRDev --> ApproveDev[Aprobar + Merge PR]
     PRBaseTrans --> ApproveDev
     ApproveDev --> DeployDev[Despliegue automático<br/>MELI DEV]
@@ -74,11 +81,14 @@ flowchart TD
     MergeInit1 --> ReleaseReady
     MergeInitN --> ReleaseReady{feature/release-DDMM<br/>consolidada}
 
-    ReleaseReady --> ConflictCheck{¿Conflictos<br/>feature/release → develop?}
+    ReleaseReady --> ConflictCheck{¿Conflictos o commits históricos<br/>sin firma hacia develop?}
     ConflictCheck -->|No| PRProd[Crear PR<br/>feature/release-DDMM → develop]
     ConflictCheck -->|Sí| CreateReleaseTrans[Desde develop crear<br/>release-DDMMToDevelop]
     CreateReleaseTrans --> ReleaseTrans[Merge firmado de feature/release-DDMM<br/>dentro de release-DDMMToDevelop<br/>Resolver conflictos]
-    ReleaseTrans --> PRReleaseTrans[Crear PR<br/>release-DDMMToDevelop → develop]
+    ReleaseTrans --> SignReleaseTrans{¿El rango del PR tiene<br/>commits sin firma?}
+    SignReleaseTrans -->|Sí| RebaseReleaseTrans[Rebase + refirma sobre<br/>origin/develop]
+    SignReleaseTrans -->|No| PRReleaseTrans
+    RebaseReleaseTrans --> PRReleaseTrans[Crear PR<br/>release-DDMMToDevelop → develop]
     PRProd --> ApproveProd[Aprobar + Merge PR]
     PRReleaseTrans --> ApproveProd
 
@@ -106,13 +116,87 @@ flowchart TD
     classDef decisionStyle fill:#f8f9fa,stroke:#495057,stroke-width:2px,color:#000
 
     class Master mainBranchStyle
-    class Base,Dev1,DevN,Trans1,CreateTrans1,MergeDirectBase,CreateBaseTrans,BaseTrans,PRBaseTrans featureBranchStyle
+    class Base,Dev1,DevN,Trans1,CreateTrans1,MergeDirectBase,CreateBaseTrans,BaseTrans,PRBaseTrans,RebaseTrans1,RebaseBaseTrans featureBranchStyle
     class Release,CreateRelease,MergeInit1,MergeInitN,ReleaseReady releaseBranchStyle
     class CreatePRDev,ApproveDev,DeployDev,RequestIDDev,TransportUAT,DeployUAT devPathStyle
     class PRProd,ApproveProd,DeployDevProd,RequestIDProd,TransportProd,UATCheck,TransportPRD,ConfirmPRD,PRMasterStable,ApproveMasterStable,UpdateMaster,ApproveMergeMaster prdPathStyle
-    class CreateReleaseTrans,ReleaseTrans,PRReleaseTrans featureBranchStyle
-    class DecisionDev1,DecisionPRD1,DecisionPRDN,DecisionUAT,BaseLista,ConflictBase,ConflictDevelop,ConflictCheck decisionStyle
+    class CreateReleaseTrans,ReleaseTrans,PRReleaseTrans,RebaseReleaseTrans featureBranchStyle
+    class DecisionDev1,DecisionPRD1,DecisionPRDN,DecisionUAT,BaseLista,ConflictBase,ConflictDevelop,ConflictCheck,SignTrans1,SignBaseTrans,SignReleaseTrans decisionStyle
+
+    %% Navegación interna. Los visores Mermaid con enlaces habilitados
+    %% permiten abrir la explicación correspondiente al hacer clic.
+    click Start href "#estructura-ramas" "Ir a Estructura de Ramas"
+    click Master href "#estructura-ramas" "Ir a Estructura de Ramas"
+    click CreateBase href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click CreateDev1 href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click CreateDevN href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click Base href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click Dev1 href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click DevN href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click DecisionDev1 href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click ConflictBase href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click MergeDirectBase href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click CreateTrans1 href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click Trans1 href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click SignTrans1 href "#refirma-historica" "Ir a Refirma de commits históricos"
+    click RebaseTrans1 href "#refirma-historica" "Ir a Refirma de commits históricos"
+    click MergeToBase1 href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click DeleteTrans1 href "#fase-1" "Ir a Fase 1: Desarrollo"
+    click BaseLista href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click ConflictDevelop href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click CreatePRDev href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click CreateBaseTrans href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click BaseTrans href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click SignBaseTrans href "#refirma-historica" "Ir a Refirma de commits históricos"
+    click RebaseBaseTrans href "#refirma-historica" "Ir a Refirma de commits históricos"
+    click PRBaseTrans href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click ApproveDev href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click DeployDev href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click RequestIDDev href "#fase-2" "Ir a Fase 2: MELI DEV"
+    click DecisionUAT href "#fase-3" "Ir a Fase 3: MELI UAT"
+    click TransportUAT href "#fase-3" "Ir a Fase 3: MELI UAT"
+    click DeployUAT href "#fase-3" "Ir a Fase 3: MELI UAT"
+    click DecisionPRD1 href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click DecisionPRDN href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click CreateRelease href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click Release href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click MergeInit1 href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click MergeInitN href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click ReleaseReady href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click ConflictCheck href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click PRProd href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click CreateReleaseTrans href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click ReleaseTrans href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click SignReleaseTrans href "#refirma-historica" "Ir a Refirma de commits históricos"
+    click RebaseReleaseTrans href "#refirma-historica" "Ir a Refirma de commits históricos"
+    click PRReleaseTrans href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click ApproveProd href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click DeployDevProd href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click RequestIDProd href "#fase-4" "Ir a Fase 4: Preparación PRD"
+    click TransportProd href "#fase-5" "Ir a Fase 5: MELI PRD"
+    click UATCheck href "#fase-5" "Ir a Fase 5: MELI PRD"
+    click TransportPRD href "#fase-5" "Ir a Fase 5: MELI PRD"
+    click ConfirmPRD href "#fase-5" "Ir a Fase 5: MELI PRD"
+    click PRMasterStable href "#fase-5" "Ir a Fase 5: MELI PRD"
+    click ApproveMasterStable href "#fase-5" "Ir a Fase 5: MELI PRD"
+    click UpdateMaster href "#fase-5" "Ir a Fase 5: MELI PRD"
+    click ApproveMergeMaster href "#fase-5" "Ir a Fase 5: MELI PRD"
+    click End href "#fase-5" "Ir a Fase 5: MELI PRD"
 ```
+
+> 🔗 Los cuadros son enlaces en los visores Mermaid que permiten interacción. Si GitHub bloquea esos enlaces por su configuración de seguridad, use la navegación alternativa siguiente.
+
+### Navegación alternativa del gráfico
+
+| Parte del gráfico | Explicación |
+|---|---|
+| Ramas principales y punto de partida | [Estructura de Ramas](#estructura-ramas) |
+| Iniciativas, `feature/base` y `feature/inicXXXXToBase` | [Fase 1: Desarrollo](#fase-1) |
+| `feature/baseToDevelop` y despliegue automático | [Fase 2: MELI DEV](#fase-2) |
+| Transporte del Request ID | [Fase 3: MELI UAT](#fase-3) |
+| Release y `release-DDMMToDevelop` | [Fase 4: Preparación PRD](#fase-4) |
+| Transporte a PRD y actualización de `master` | [Fase 5: MELI PRD](#fase-5) |
+| Decisiones de firma y comandos de rebase | [Refirma de commits históricos](#refirma-historica) |
 
 ### 🎨 Leyenda de Colores
 
@@ -126,6 +210,8 @@ flowchart TD
 | ⚪ **Gris** | Decisiones y puntos de control |
 
 ---
+
+<a id="estructura-ramas"></a>
 
 ## 🌳 Estructura de Ramas
 
@@ -146,6 +232,8 @@ flowchart TD
 ---
 
 ## 🔄 Flujo de Trabajo Detallado
+
+<a id="fase-1"></a>
 
 ### Fase 1: Desarrollo de Iniciativa 🔧
 
@@ -183,6 +271,19 @@ git merge --no-ff -S origin/feature/inic1111
 # Si hay conflictos, resolverlos y finalizar el merge firmado
 git add .
 git commit -S -m "Integrate inic1111 into feature/base"
+```
+
+**5. Verificar si la temporal introduce commits históricos sin firma**
+
+```bash
+git log --reverse --format="%h %G? | %an | %s" origin/feature/base..HEAD
+```
+
+Si el rango contiene commits con estado `N`, ejecutar la sección [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `feature/inic1111ToBase`. Si todos están firmados, no se necesita rebase.
+
+Publicar la temporal después de validar o refirmar:
+
+```bash
 git push -u origin HEAD
 ```
 
@@ -194,7 +295,7 @@ feature/inic1111ToBase → feature/base
 
 > 💡 La temporal nace desde `feature/base`. De esta manera, `feature/inic1111` no absorbe las demás iniciativas ya consolidadas.
 
-**5. Borrar rama de transición**
+**6. Borrar rama de transición**
 
 ```bash
 git switch feature/base
@@ -205,6 +306,8 @@ git push origin --delete feature/inic1111ToBase
 > 💡 **Nota:** No se debe crear después otro PR de `feature/inic1111 → feature/base`; el merge realizado en la temporal ya incorporó la iniciativa.
 
 ---
+
+<a id="fase-2"></a>
 
 ### Fase 2: Despliegue a MELI DEV 🚀
 
@@ -227,6 +330,17 @@ git merge --no-ff -S origin/feature/base
 # Si hay conflictos, resolverlos y finalizar el merge firmado
 git add .
 git commit -S -m "Integrate feature/base into develop for UAT"
+```
+
+Antes de publicar, comprobar el rango que entraría en `develop`:
+
+```bash
+git log --reverse --format="%h %G? | %an | %s" origin/develop..HEAD
+```
+
+Si aparecen commits con estado `N`, ejecutar la sección [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `feature/baseToDevelop` y usando `origin/develop` como upstream.
+
+```bash
 git push -u origin HEAD
 ```
 
@@ -252,6 +366,8 @@ Probar la funcionalidad en el ambiente de desarrollo
 
 ---
 
+<a id="fase-3"></a>
+
 ### Fase 3: Transporte a MELI UAT 🧪
 
 > ⚠️ **Importante:** El transporte a UAT se usa para pruebas de aceptación de usuario o cuando no se cuenta con datos en ambiente MELI DEV.
@@ -265,6 +381,8 @@ Usar SOLMAN para mover el Request ID de DEV a UAT
 Realizar pruebas de aceptación o validar con datos reales
 
 ---
+
+<a id="fase-4"></a>
 
 ### Fase 4: Preparación para MELI PRD 📦
 
@@ -314,6 +432,17 @@ git merge --no-ff -S origin/feature/release-1201
 # Si hay conflictos, resolverlos sin omitir cambios vigentes de develop
 git add .
 git commit -S -m "Integrate release-1201 into develop"
+```
+
+Antes de publicar, comprobar el rango que entraría en `develop`:
+
+```bash
+git log --reverse --format="%h %G? | %an | %s" origin/develop..HEAD
+```
+
+Si aparecen commits con estado `N`, ejecutar la sección [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `release-1201ToDevelop` y usando `origin/develop` como upstream.
+
+```bash
 git push -u origin HEAD
 ```
 
@@ -344,6 +473,8 @@ No se debe realizar después un segundo PR de `feature/release-1201 → develop`
 El merge dispara el despliegue a MELI DEV y genera el Request ID para transportar a UAT y PRD.
 
 ---
+
+<a id="fase-5"></a>
 
 ### Fase 5: Despliegue a MELI PRD ✅
 
@@ -385,6 +516,198 @@ Validar funcionamiento
 
 ---
 
+<a id="refirma-historica"></a>
+
+## 🔏 Refirma de commits históricos en ramas temporales
+
+Este procedimiento se usa cuando una iniciativa o una release nació desde un punto de `master` que la rama destino todavía no contiene. Aunque los cambios productivos hayan pasado previamente por `develop`, los commits de merge creados posteriormente en `master` pueden tener hashes diferentes. Un merge normal puede incorporarlos en el rango del PR y GitHub rechazará los que no estén firmados.
+
+La refirma debe ejecutarse únicamente sobre la rama temporal no protegida, después de integrar la rama fuente y resolver sus conflictos, pero antes de mergear el PR.
+
+No se debe reescribir:
+
+- `feature/inic1111`.
+- `feature/release-1201`.
+- `feature/base`.
+- `develop`, `master` o `master-stable`.
+
+### Cuándo se necesita
+
+Estando en la rama temporal, consultar exactamente lo que el PR introduciría:
+
+```bash
+git log --reverse --format="%h %G? | %an | %s" origin/RAMA_DESTINO..HEAD
+```
+
+Estados relevantes:
+
+- `G`: firma válida.
+- `U`: firma válida con confianza local no definida.
+- `N`: commit sin firma.
+- `B`: firma incorrecta.
+- `E`: error de verificación.
+
+Si no aparecen `N`, `B` o `E`, no se necesita rebase. Si aparecen, se debe refirmar antes de publicar o actualizar el PR.
+
+### Aplicación según el flujo
+
+| Flujo | Rama temporal | Upstream para el rebase |
+|---|---|---|
+| Iniciativa hacia base | `feature/inic1111ToBase` | `origin/feature/base` |
+| Base hacia develop/DEV-UAT | `feature/baseToDevelop` | `origin/develop` |
+| Release hacia develop/PRD | `release-1201ToDevelop` | `origin/develop` |
+
+### Procedimiento para `feature/inic1111ToBase`
+
+La rama debe existir y contener previamente el merge de `feature/inic1111` sobre `feature/base`, incluida la resolución de conflictos.
+
+```bash
+git fetch origin --prune
+git switch feature/inic1111ToBase
+git status
+```
+
+El árbol de trabajo debe estar limpio. Crear un respaldo local:
+
+```bash
+git branch backup/inic1111ToBase-before-sign
+```
+
+Activar la firma para los commits que Git recreará:
+
+```bash
+git config commit.gpgSign true
+```
+
+En PowerShell, ejecutar en una sola línea:
+
+```powershell
+git rebase -i --force-rebase --rebase-merges=rebase-cousins --exec "git commit --amend --no-edit -S" origin/feature/base
+```
+
+Se abrirá Vim u otro editor con el plan del rebase. No modificar las instrucciones; guardar y cerrar. En Vim:
+
+```text
+Esc
+:wq
+Enter
+```
+
+Si el rebase se detiene por conflictos:
+
+```bash
+git status
+# Resolver los archivos
+git add .
+git rebase --continue
+```
+
+No volver a ejecutar el comando inicial mientras exista un rebase en curso. No utilizar `git rebase --skip` salvo que se haya confirmado que el commit quedó vacío porque sus cambios ya estaban aplicados.
+
+Al finalizar debe aparecer:
+
+```text
+Successfully rebased and updated refs/heads/feature/inic1111ToBase
+```
+
+Comprobar que el contenido final no cambió:
+
+```bash
+git diff --exit-code backup/inic1111ToBase-before-sign HEAD
+```
+
+Comprobar las firmas:
+
+```bash
+git log --reverse --format="%h %G? | autor: %an | committer: %cn | %s" origin/feature/base..HEAD
+```
+
+Si la temporal todavía no existe remotamente:
+
+```bash
+git push -u origin HEAD
+```
+
+Si ya había sido publicada o ya existe el PR:
+
+```bash
+git push --force-with-lease origin feature/inic1111ToBase
+```
+
+Después de reescribir la historia no utilizar el botón **Sync Changes** de VS Code. El remoto contiene los hashes antiguos y debe reemplazarse explícitamente mediante `--force-with-lease`.
+
+### Procedimiento para `feature/baseToDevelop`
+
+Se aplica el mismo proceso, cambiando la rama y el upstream:
+
+```bash
+git fetch origin --prune
+git switch feature/baseToDevelop
+git status
+git branch backup/baseToDevelop-before-sign
+git config commit.gpgSign true
+git rebase -i --force-rebase --rebase-merges=rebase-cousins --exec "git commit --amend --no-edit -S" origin/develop
+```
+
+Validar el contenido y las firmas:
+
+```bash
+git diff --exit-code backup/baseToDevelop-before-sign HEAD
+git log --reverse --format="%h %G? | %an | %s" origin/develop..HEAD
+```
+
+Si la rama ya estaba publicada:
+
+```bash
+git push --force-with-lease origin feature/baseToDevelop
+```
+
+### Procedimiento para `release-1201ToDevelop`
+
+Sí se debe aplicar también a una release cuando `origin/develop..HEAD` contiene commits históricos sin firma. La rama `feature/release-1201` original permanece sin modificaciones; solamente se reescribe la temporal.
+
+```bash
+git fetch origin --prune
+git switch release-1201ToDevelop
+git status
+git branch backup/release-1201ToDevelop-before-sign
+git config commit.gpgSign true
+git rebase -i --force-rebase --rebase-merges=rebase-cousins --exec "git commit --amend --no-edit -S" origin/develop
+```
+
+Validar el contenido y las firmas:
+
+```bash
+git diff --exit-code backup/release-1201ToDevelop-before-sign HEAD
+git log --reverse --format="%h %G? | %an | %s" origin/develop..HEAD
+```
+
+Si la rama ya estaba publicada:
+
+```bash
+git push --force-with-lease origin release-1201ToDevelop
+```
+
+### Recuperación
+
+Para cancelar mientras el rebase está activo:
+
+```bash
+git rebase --abort
+```
+
+Si el rebase terminó pero el resultado no es correcto, restaurar la temporal desde su respaldo correspondiente. Ejemplo:
+
+```bash
+git reset --hard backup/inic1111ToBase-before-sign
+```
+
+Este comando descarta la historia recreada; debe utilizarse únicamente sobre la rama temporal y después de comprobar que el respaldo existe.
+
+> ⚠️ **Alcance:** La refirma crea commits nuevos con hashes diferentes y la firma de quien ejecuta el proceso. Conserva normalmente el autor original, pero no modifica ni firma los objetos históricos existentes en `master`. Es una solución para la rama temporal y el PR actual, no una reconciliación permanente de las historias.
+
+---
+
 ## ⚠️ Reglas y Mejores Prácticas
 
 ### 🚫 Prohibiciones Importantes
@@ -394,6 +717,9 @@ Validar funcionamiento
 - **NUNCA** resolver conflictos del PR release directamente: usar `release-DDMMToDevelop` creada desde `develop`
 - **NUNCA** omitir cambios de `develop` al resolver conflictos en la rama temporal (riesgo de pérdida de información)
 - **NUNCA** agregar un cambio cosmético para crear un segundo PR después de integrar la rama temporal
+- **NUNCA** ejecutar la refirma sobre la iniciativa, la release original o una rama protegida
+- **NUNCA** usar `git push --force`; utilizar solamente `git push --force-with-lease` sobre ramas temporales
+- **NUNCA** pulsar **Sync Changes** después de reescribir una rama temporal
 - **NUNCA** mezclar iniciativas DEV con PRD en el mismo PR
 - **NUNCA** hacer push directo a `master` o `develop` (solo mediante PR)
 - **NUNCA** pasar a PRD sin crear una rama release
@@ -407,11 +733,29 @@ Validar funcionamiento
 - ✔️ Usar `git pull --ff-only` al actualizar la rama de partida
 - ✔️ Usar `git push -u origin HEAD` para el primer push de una rama nueva
 - ✔️ Usar **Create a merge commit** en los PR para conservar la ascendencia
+- ✔️ Crear un respaldo local antes de refirmar una rama temporal
+- ✔️ Comparar el contenido contra el respaldo después del rebase
+- ✔️ Verificar `origin/RAMA_DESTINO..HEAD` antes de publicar el PR
 - ✔️ Nombrar releases con formato DDMM
 - ✔️ Siempre crear rama release para despliegues a PRD
 - ✔️ Validar en UAT cuando sea necesario
 - ✔️ Documentar Request IDs para trazabilidad
 - ✔️ Actualizar master inmediatamente después de PRD
+
+### 📋 Checklist de Despliegue a DEV/UAT
+
+- [ ] Iniciativa creada desde `master`
+- [ ] Commits nuevos de la iniciativa firmados
+- [ ] Rama `feature/inicXXXXToBase` creada desde `feature/base` cuando fue necesaria
+- [ ] Conflictos con `feature/base` resueltos en la temporal
+- [ ] Rango `origin/feature/base..HEAD` revisado
+- [ ] Rebase de refirma ejecutado si el rango contenía commits históricos sin firma
+- [ ] Contenido comparado con el respaldo después del rebase
+- [ ] PR hacia `feature/base` aprobado y mergeado
+- [ ] Rama `feature/baseToDevelop` creada desde `develop` cuando fue necesaria
+- [ ] Rango `origin/develop..HEAD` revisado antes del PR
+- [ ] PR hacia `develop` aprobado y mergeado
+- [ ] Request ID generado y transportado a UAT
 
 ### 📋 Checklist de Despliegue a PRD
 
@@ -419,6 +763,9 @@ Validar funcionamiento
 - [ ] Iniciativa(s) consolidada(s) en release
 - [ ] Commits de iniciativas, release y resolución de conflictos firmados
 - [ ] Rama `release-DDMMToDevelop` creada desde `develop` cuando hubo conflictos
+- [ ] Rango `origin/develop..HEAD` revisado
+- [ ] Rebase de refirma ejecutado sobre `release-DDMMToDevelop` si había commits históricos sin firma
+- [ ] Contenido de la temporal comparado con el respaldo después del rebase
 - [ ] PR creado, aprobado y mergeado a develop
 - [ ] Código desplegado a MELI DEV
 - [ ] Request ID generado por CI/CD
@@ -470,6 +817,6 @@ Validar funcionamiento
 <div align="center">
 
 **Estrategia de Branching Git - MercadoLibre**  
-_Versión 4 - Octubre 2026_
+_Versión 4.2 - Octubre 2026_
 
 </div>
