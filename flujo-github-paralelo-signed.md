@@ -35,10 +35,10 @@ flowchart TD
 
     %% Flujo para MELI DEV
     Dev1 --> DecisionDev1{¿Listo para<br/>MELI DEV?}
-    DecisionDev1 -->|Sí| ConflictBase{¿Conflictos o commits<br/>históricos sin firma?}
+    DecisionDev1 -->|Sí| ConflictBase{¿El PR hacia<br/>feature/base tiene conflictos?}
     ConflictBase -->|No| MergeDirectBase[PR feature/inic1111<br/>→ feature/base]
-    ConflictBase -->|Sí| CreateTrans1[Desde feature/base crear<br/>feature/inic1111ToBase]
-    CreateTrans1 --> Trans1[Merge firmado de feature/inic1111<br/>dentro de inic1111ToBase<br/>Resolver conflictos]
+    ConflictBase -->|Sí| CreateTrans1[Desde feature/inic1111 crear<br/>feature/inic1111ToBase]
+    CreateTrans1 --> Trans1[Merge firmado de feature/base<br/>dentro de inic1111ToBase<br/>Resolver conflictos]
     Trans1 --> SignTrans1{¿El rango del PR tiene<br/>commits sin firma?}
     SignTrans1 -->|Sí| RebaseTrans1[Rebase + refirma sobre<br/>origin/feature/base]
     SignTrans1 -->|No| MergeToBase1
@@ -49,10 +49,10 @@ flowchart TD
     MergeDirectBase --> BaseLista
     MergeToBase1 --> BaseLista{feature/base<br/>actualizada}
 
-    BaseLista --> ConflictDevelop{¿Conflictos o commits sin firma<br/>feature/base → develop?}
+    BaseLista --> ConflictDevelop{¿El PR feature/base → develop<br/>tiene conflictos?}
     ConflictDevelop -->|No| CreatePRDev[Crear PR<br/>feature/base → develop]
-    ConflictDevelop -->|Sí| CreateBaseTrans[Desde develop crear<br/>feature/baseToDevelop]
-    CreateBaseTrans --> BaseTrans[Merge firmado de feature/base<br/>dentro de baseToDevelop<br/>Resolver conflictos]
+    ConflictDevelop -->|Sí| CreateBaseTrans[Desde feature/base crear<br/>feature/baseToDevelop]
+    CreateBaseTrans --> BaseTrans[Merge firmado de develop<br/>dentro de baseToDevelop<br/>Resolver conflictos]
     BaseTrans --> SignBaseTrans{¿El rango del PR tiene<br/>commits sin firma?}
     SignBaseTrans -->|Sí| RebaseBaseTrans[Rebase + refirma sobre<br/>origin/develop]
     SignBaseTrans -->|No| PRBaseTrans
@@ -81,10 +81,10 @@ flowchart TD
     MergeInit1 --> ReleaseReady
     MergeInitN --> ReleaseReady{feature/release-DDMM<br/>consolidada}
 
-    ReleaseReady --> ConflictCheck{¿Conflictos o commits históricos<br/>sin firma hacia develop?}
+    ReleaseReady --> ConflictCheck{¿El PR de release hacia<br/>develop tiene conflictos?}
     ConflictCheck -->|No| PRProd[Crear PR<br/>feature/release-DDMM → develop]
-    ConflictCheck -->|Sí| CreateReleaseTrans[Desde develop crear<br/>release-DDMMToDevelop]
-    CreateReleaseTrans --> ReleaseTrans[Merge firmado de feature/release-DDMM<br/>dentro de release-DDMMToDevelop<br/>Resolver conflictos]
+    ConflictCheck -->|Sí| CreateReleaseTrans[Desde feature/release-DDMM crear<br/>release-DDMMToDevelop]
+    CreateReleaseTrans --> ReleaseTrans[Merge firmado de develop<br/>dentro de release-DDMMToDevelop<br/>Resolver conflictos]
     ReleaseTrans --> SignReleaseTrans{¿El rango del PR tiene<br/>commits sin firma?}
     SignReleaseTrans -->|Sí| RebaseReleaseTrans[Rebase + refirma sobre<br/>origin/develop]
     SignReleaseTrans -->|No| PRReleaseTrans
@@ -160,6 +160,8 @@ flowchart TD
 
 ### Fase 1: Desarrollo de Iniciativa 🔧
 
+> 🔄 **Punto de rebase para el flujo hacia UAT:** primero se intenta el PR directo `feature/inicXXXX → feature/base`. Solo si presenta conflictos se crea `feature/inicXXXXToBase` desde la iniciativa y se incorpora `feature/base` en esa temporal para resolverlos. El rebase sobre `origin/feature/base` se ejecuta únicamente si el rango resultante contiene commits sin firma o con firma inválida; los conflictos por sí solos no requieren rebase.
+
 **1. Crear rama de iniciativa desde master**
 
 ```bash
@@ -178,47 +180,58 @@ git commit -S -m "feat: iniciativa 1111"
 git push -u origin HEAD
 ```
 
-**3. Crear rama de transición desde `feature/base`**
+**3. Crear el PR directo hacia `feature/base`**
+
+```text
+feature/inic1111 → feature/base
+```
+
+Si el PR no presenta conflictos, aprobarlo y mergearlo. No se crea una rama `ToBase`.
+
+**4. Solo si hay conflictos, crear la temporal desde la iniciativa**
 
 ```bash
-git switch feature/base
-git pull --ff-only origin feature/base
+git switch feature/inic1111
+git pull --ff-only origin feature/inic1111
 git switch -c feature/inic1111ToBase
 ```
 
-**4. Integrar la iniciativa dentro de la rama temporal**
+La temporal es una copia de la iniciativa. No debe nacer desde `feature/base` y no se debe hacer merge de la iniciativa dentro de una rama creada desde `feature/base`.
+
+**5. Incorporar `feature/base` en la temporal y resolver los conflictos**
 
 ```bash
-git merge --no-ff -S origin/feature/inic1111
+git fetch origin --prune
+git merge --no-ff -S origin/feature/base
 
-# Si hay conflictos, resolverlos y finalizar el merge firmado
+# Si el merge se detiene, resolver los conflictos y finalizarlo firmado
 git add .
-git commit -S -m "Integrate inic1111 into feature/base"
+git commit -S -m "Merge feature/base into inic1111ToBase"
 ```
 
-**5. Verificar si la temporal introduce commits históricos sin firma**
+Antes de publicar, verificar el rango que introducirá el PR:
 
 ```bash
 git log --reverse --format="%h %G? | %an | %s" origin/feature/base..HEAD
 ```
 
-Si el rango contiene commits con estado `N`, ejecutar la sección [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `feature/inic1111ToBase`. Si todos están firmados, no se necesita rebase.
+Si aparecen commits con estado `N`, `B` o `E`, aplicar el [procedimiento de rebase y refirma](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `feature/inic1111ToBase`, usando `origin/feature/base` como upstream. Si todos los commits tienen firma válida, no se hace rebase.
 
-Publicar la temporal después de validar o refirmar:
+Publicar la temporal:
 
 ```bash
 git push -u origin HEAD
 ```
 
-Crear, aprobar y mergear el PR:
+Crear, aprobar y mergear el PR sustituto:
 
 ```text
 feature/inic1111ToBase → feature/base
 ```
 
-> 💡 La temporal nace desde `feature/base`. De esta manera, `feature/inic1111` no absorbe las demás iniciativas ya consolidadas.
+> 💡 La temporal nace desde `feature/inic1111` y recibe el merge de `feature/base` para resolver los conflictos sin modificar la iniciativa original. El rebase queda reservado exclusivamente para refirmar commits cuando la verificación lo exija.
 
-**6. Borrar rama de transición**
+**6. Borrar la rama de transición**
 
 ```bash
 git switch feature/base
@@ -234,23 +247,24 @@ git push origin --delete feature/inic1111ToBase
 
 **1. Integrar `feature/base` en `develop`**
 
-Si no hay conflictos, crear el PR directo:
+El flujo normal no requiere un nuevo rebase. Crear el PR directo:
 
 ```text
 feature/base → develop
 ```
 
-Si hay conflictos, no incorporar `develop` dentro de `feature/base`. Posicionarse en `develop` y crear desde allí la rama de transición:
+Solo si el PR presenta conflictos, crear la rama de transición desde `feature/base` e incorporar `develop` en esa temporal para resolverlos:
 
 ```bash
-git switch develop
-git pull --ff-only origin develop
+git switch feature/base
+git pull --ff-only origin feature/base
 git switch -c feature/baseToDevelop
-git merge --no-ff -S origin/feature/base
+git fetch origin --prune
+git merge --no-ff -S origin/develop
 
-# Si hay conflictos, resolverlos y finalizar el merge firmado
+# Si el merge se detiene, resolver los conflictos y finalizarlo firmado
 git add .
-git commit -S -m "Integrate feature/base into develop for UAT"
+git commit -S -m "Merge develop into feature/baseToDevelop"
 ```
 
 Antes de publicar, comprobar el rango que entraría en `develop`:
@@ -259,7 +273,7 @@ Antes de publicar, comprobar el rango que entraría en `develop`:
 git log --reverse --format="%h %G? | %an | %s" origin/develop..HEAD
 ```
 
-Si aparecen commits con estado `N`, ejecutar la sección [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `feature/baseToDevelop` y usando `origin/develop` como upstream.
+Si aparecen commits con estado `N`, `B` o `E`, ejecutar la sección [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `feature/baseToDevelop`, usando `origin/develop` como upstream. Si todos tienen firma válida, no se hace rebase.
 
 ```bash
 git push -u origin HEAD
@@ -291,6 +305,8 @@ Probar la funcionalidad en el ambiente de desarrollo
 
 > ⚠️ **Importante:** El transporte a UAT se usa para pruebas de aceptación de usuario o cuando no se cuenta con datos en ambiente MELI DEV.
 
+> 🔄 **Dónde ocurre el rebase:** no se hace durante el transporte por SOLMAN. Primero se intenta el PR directo `feature/inicXXXX → feature/base`; si presenta conflictos se crea `feature/inicXXXXToBase` desde la iniciativa y se incorpora `feature/base` en esa temporal. Solo se hace rebase/refirma si la verificación posterior detecta commits `N`, `B` o `E`.
+
 **1. Transportar Request ID a través de SOLMAN**
 
 Usar SOLMAN para mover el Request ID de DEV a UAT
@@ -304,6 +320,8 @@ Realizar pruebas de aceptación o validar con datos reales
 ### Fase 4: Preparación para MELI PRD 📦
 
 > 📦 **Importante:** Siempre se debe crear una rama release para pasar a producción, independientemente de si es una o múltiples iniciativas.
+
+> 🔄 **Punto de rebase para el flujo hacia PRD:** primero se intenta el PR directo `feature/release-DDMM → develop`. Solo si presenta conflictos se crea `release-DDMMToDevelop` desde la release y se incorpora `develop` en esa temporal para resolverlos. El rebase sobre `origin/develop` se ejecuta únicamente si el rango resultante contiene commits sin firma o con firma inválida.
 
 **1. Crear rama de release**
 
@@ -327,28 +345,33 @@ git merge --no-ff -S origin/feature/inic2222
 git push -u origin HEAD
 ```
 
-**3. Crear PR desde la release**
+**3. Preparar la integración de la release hacia `develop`**
 
-```bash
-# Crear PR: feature/release-1201 → develop
+Si no hay conflictos y el rango del PR contiene únicamente commits con firma válida, se puede crear el PR directo:
+
+```text
+feature/release-1201 → develop
 ```
 
-**4. Resolver conflictos (si aplica)**
+Si hay conflictos, continuar con la rama temporal del paso 4. Si no hay conflictos, no se crea una rama `ToDevelop`.
 
-> ⚠️ **Importante:** Si el PR presenta conflictos, **no actualizar la release incorporándole `develop`**. La release debe mantenerse limpia para actualizar posteriormente `master`.
+**4. Resolver los conflictos en la temporal y verificar las firmas**
+
+> ⚠️ **Importante:** Si el PR presenta conflictos, **no actualizar la release original incorporándole `develop`**. El merge y cualquier rebase necesario se hacen únicamente en una temporal creada desde la release.
 
 ```bash
-# Posicionarse en develop y crear desde allí la rama temporal
-git switch develop
-git pull --ff-only origin develop
+# Posicionarse en la release y crear desde allí la rama temporal
+git switch feature/release-1201
+git pull --ff-only origin feature/release-1201
 git switch -c release-1201ToDevelop
 
-# Integrar la release dentro de la rama temporal
-git merge --no-ff -S origin/feature/release-1201
+# Incorporar develop únicamente en la temporal
+git fetch origin --prune
+git merge --no-ff -S origin/develop
 
-# Si hay conflictos, resolverlos sin omitir cambios vigentes de develop
+# Si el merge se detiene, resolver los conflictos y finalizarlo firmado
 git add .
-git commit -S -m "Integrate release-1201 into develop"
+git commit -S -m "Merge develop into release-1201ToDevelop"
 ```
 
 Antes de publicar, comprobar el rango que entraría en `develop`:
@@ -357,19 +380,21 @@ Antes de publicar, comprobar el rango que entraría en `develop`:
 git log --reverse --format="%h %G? | %an | %s" origin/develop..HEAD
 ```
 
-Si aparecen commits con estado `N`, ejecutar la sección [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `release-1201ToDevelop` y usando `origin/develop` como upstream.
+Si aparecen commits con estado `N`, `B` o `E`, ejecutar la sección [Refirma de commits históricos](#-refirma-de-commits-históricos-en-ramas-temporales) sobre `release-1201ToDevelop`, usando `origin/develop` como upstream. Si todos tienen firma válida, no se hace rebase.
+
+El orden es: crear la temporal desde `feature/release-1201` → incorporar `origin/develop` mediante merge → resolver conflictos → verificar firmas → hacer rebase/refirma solo si aparecen `N`, `B` o `E` → publicar la temporal → crear el PR hacia `develop`.
 
 ```bash
 git push -u origin HEAD
 ```
 
-Una vez resueltos los conflictos, crear, aprobar y mergear el PR:
+Una vez resueltos los conflictos y completado el control de firmas —incluido el rebase/refirma solo si fue necesario—, crear, aprobar y mergear el PR:
 
 ```text
 release-1201ToDevelop → develop
 ```
 
-Este PR debe disparar CI/CD y generar el Request ID. Su último merge contiene los cambios de `feature/release-1201` y la resolución necesaria sobre el estado actual de `develop`.
+Este PR debe disparar CI/CD y generar el Request ID. La temporal contiene los cambios de `feature/release-1201` reconciliados con el estado actual de `develop`, sin modificar la release original.
 
 Después de ese merge, eliminar la rama temporal:
 
@@ -381,7 +406,7 @@ git push origin --delete release-1201ToDevelop
 
 No se debe realizar después un segundo PR de `feature/release-1201 → develop`: la integración de la temporal ya incorporó la release.
 
-> 💡 **Por qué este flujo:** `release-DDMMToDevelop` nace desde `develop` e integra dentro de ella `feature/release-1201`. Los commits históricos sin firma de `develop` ya pertenecen a la base y no forman parte del rango nuevo. La release original permanece aislada para su posterior integración en `master`.
+> 💡 **Por qué este flujo:** `release-DDMMToDevelop` nace desde `feature/release-1201` y únicamente esa temporal recibe el merge de `develop`. La release original permanece aislada para su posterior integración en `master`; el rebase se reserva para refirmar si la verificación detecta commits no válidos.
 
 > ⚠️ **CI/CD y cambios menores:** No agregar un espacio, comentario u otro cambio cosmético a `feature/release-1201` para disparar un segundo PR. Como CI/CD utiliza el último commit, podría procesar únicamente ese cambio menor. El PR `release-1201ToDevelop → develop` debe ser el disparador efectivo.
 
@@ -435,7 +460,7 @@ Validar funcionamiento
 
 Este procedimiento se usa cuando una iniciativa o una release nació desde un punto de `master` que la rama destino todavía no contiene. Aunque los cambios productivos hayan pasado previamente por `develop`, los commits de merge creados posteriormente en `master` pueden tener hashes diferentes. Un merge normal puede incorporarlos en el rango del PR y GitHub rechazará los que no estén firmados.
 
-La refirma debe ejecutarse únicamente sobre la rama temporal no protegida, después de integrar la rama fuente y resolver sus conflictos, pero antes de mergear el PR.
+La refirma debe ejecutarse únicamente sobre la rama temporal no protegida. La temporal se crea desde la rama fuente solo cuando el PR directo presenta conflictos; la rama destino se incorpora mediante un merge firmado para resolverlos. Después se revisa el rango del PR y solo se ejecuta el rebase/refirma si aparecen commits `N`, `B` o `E`. La rama fuente original no se rebasa, no se mezcla con el destino y no se reescribe.
 
 No se debe reescribir:
 
@@ -460,19 +485,26 @@ Estados relevantes:
 - `B`: firma incorrecta.
 - `E`: error de verificación.
 
-Si no aparecen `N`, `B` o `E`, no se necesita rebase. Si aparecen, se debe refirmar antes de publicar o actualizar el PR.
+Los conflictos se resuelven mediante el merge de la rama destino dentro de la temporal. Ese merge no implica hacer rebase. El rebase/refirma solo se necesita si la revisión posterior muestra commits `N`, `B` o `E`; si todo el rango tiene firmas válidas, se publica la temporal sin rebasarla.
 
 ### Aplicación según el flujo
+
+Las ramas `ToBase` y `ToDevelop` se crean únicamente cuando el PR directo presenta conflictos. Los dos puntos que deben quedar identificados en el paso a paso son:
+
+1. **Camino a UAT:** al llevar cada iniciativa a `feature/base`, antes del PR hacia `feature/base`.
+2. **Camino a PRD:** al llevar la release a `develop`, antes del PR hacia `develop`.
+
+En ambos casos, la temporal nace desde la rama fuente y recibe un merge firmado de la rama destino para resolver los conflictos. Solo si el rango contiene firmas faltantes o inválidas se rebasa la temporal usando el destino como upstream. No se reescriben las ramas originales ni las protegidas.
 
 | Flujo | Rama temporal | Upstream para el rebase |
 |---|---|---|
 | Iniciativa hacia base | `feature/inic1111ToBase` | `origin/feature/base` |
-| Base hacia develop/DEV-UAT | `feature/baseToDevelop` | `origin/develop` |
+| Base hacia develop/DEV-UAT (solo si el PR directo tiene conflictos) | `feature/baseToDevelop` | `origin/develop` |
 | Release hacia develop/PRD | `release-1201ToDevelop` | `origin/develop` |
 
 ### Procedimiento para `feature/inic1111ToBase`
 
-La rama debe existir y contener previamente el merge de `feature/inic1111` sobre `feature/base`, incluida la resolución de conflictos.
+La rama debe haberse creado desde `feature/inic1111` después de comprobar que el PR directo hacia `feature/base` presenta conflictos, y debe contener el merge firmado de `feature/base` usado para resolverlos. No debe haber nacido desde `feature/base`.
 
 ```bash
 git fetch origin --prune
@@ -523,10 +555,11 @@ Al finalizar debe aparecer:
 Successfully rebased and updated refs/heads/feature/inic1111ToBase
 ```
 
-Comprobar que el contenido final no cambió:
+Revisar el contenido que la temporal introducirá en `feature/base` y ejecutar las pruebas correspondientes:
 
 ```bash
-git diff --exit-code backup/inic1111ToBase-before-sign HEAD
+git diff --stat origin/feature/base...HEAD
+git diff origin/feature/base...HEAD
 ```
 
 Comprobar las firmas:
@@ -562,10 +595,11 @@ git config commit.gpgSign true
 git rebase -i --force-rebase --rebase-merges=rebase-cousins --exec "git commit --amend --no-edit -S" origin/develop
 ```
 
-Validar el contenido y las firmas:
+Revisar el contenido que la temporal introducirá en `develop` y validar las firmas:
 
 ```bash
-git diff --exit-code backup/baseToDevelop-before-sign HEAD
+git diff --stat origin/develop...HEAD
+git diff origin/develop...HEAD
 git log --reverse --format="%h %G? | %an | %s" origin/develop..HEAD
 ```
 
@@ -577,7 +611,7 @@ git push --force-with-lease origin feature/baseToDevelop
 
 ### Procedimiento para `release-1201ToDevelop`
 
-Sí se debe aplicar también a una release cuando `origin/develop..HEAD` contiene commits históricos sin firma. La rama `feature/release-1201` original permanece sin modificaciones; solamente se reescribe la temporal.
+La temporal debe haberse creado desde `feature/release-1201` únicamente porque el PR directo hacia `develop` presentó conflictos y debe contener el merge firmado de `develop` usado para resolverlos. La rama `feature/release-1201` original permanece sin modificaciones; solamente se rebasa y refirma la temporal si la verificación de firmas lo exige.
 
 ```bash
 git fetch origin --prune
@@ -588,10 +622,11 @@ git config commit.gpgSign true
 git rebase -i --force-rebase --rebase-merges=rebase-cousins --exec "git commit --amend --no-edit -S" origin/develop
 ```
 
-Validar el contenido y las firmas:
+Revisar el contenido que la temporal introducirá en `develop` y validar las firmas:
 
 ```bash
-git diff --exit-code backup/release-1201ToDevelop-before-sign HEAD
+git diff --stat origin/develop...HEAD
+git diff origin/develop...HEAD
 git log --reverse --format="%h %G? | %an | %s" origin/develop..HEAD
 ```
 
@@ -627,7 +662,7 @@ Este comando descarta la historia recreada; debe utilizarse únicamente sobre la
 
 - **NUNCA** incorporar `feature/base` dentro de una iniciativa para resolver conflictos
 - **NUNCA** incorporar `develop` dentro de `feature/base` o de una release
-- **NUNCA** resolver conflictos del PR release directamente: usar `release-DDMMToDevelop` creada desde `develop`
+- **NUNCA** rebasar la iniciativa, `feature/base` o la release original para resolver un PR: usar una temporal creada desde la rama fuente
 - **NUNCA** omitir cambios de `develop` al resolver conflictos en la rama temporal (riesgo de pérdida de información)
 - **NUNCA** agregar un cambio cosmético para crear un segundo PR después de integrar la rama temporal
 - **NUNCA** ejecutar la refirma sobre la iniciativa, la release original o una rama protegida
@@ -639,15 +674,15 @@ Este comando descarta la historia recreada; debe utilizarse únicamente sobre la
 
 ### ✅ Mejores Prácticas
 
-- ✔️ Crear cada rama de transición desde la rama destino
-- ✔️ Integrar la rama fuente dentro de la transición mediante un merge firmado
+- ✔️ Intentar siempre el PR directo y crear una rama de transición solo cuando presente conflictos
+- ✔️ Crear cada rama de transición desde la fuente, incorporar el destino mediante merge firmado y rebasar únicamente si aparecen commits sin firma o con firma inválida
 - ✔️ Borrar ramas de transición después del merge
 - ✔️ Mantener `feature/base` y las releases aisladas del historial de `develop`
 - ✔️ Usar `git pull --ff-only` al actualizar la rama de partida
 - ✔️ Usar `git push -u origin HEAD` para el primer push de una rama nueva
 - ✔️ Usar **Create a merge commit** en los PR para conservar la ascendencia
 - ✔️ Crear un respaldo local antes de refirmar una rama temporal
-- ✔️ Comparar el contenido contra el respaldo después del rebase
+- ✔️ Revisar el diff contra la rama destino y ejecutar las pruebas después del rebase
 - ✔️ Verificar `origin/RAMA_DESTINO..HEAD` antes de publicar el PR
 - ✔️ Nombrar releases con formato DDMM
 - ✔️ Siempre crear rama release para despliegues a PRD
@@ -659,13 +694,14 @@ Este comando descarta la historia recreada; debe utilizarse únicamente sobre la
 
 - [ ] Iniciativa creada desde `master`
 - [ ] Commits nuevos de la iniciativa firmados
-- [ ] Rama `feature/inicXXXXToBase` creada desde `feature/base` cuando fue necesaria
-- [ ] Conflictos con `feature/base` resueltos en la temporal
+- [ ] PR directo `feature/inicXXXX → feature/base` intentado primero
+- [ ] Rama `feature/inicXXXXToBase` creada desde la iniciativa únicamente si hubo conflictos
+- [ ] `feature/base` incorporada mediante merge firmado y conflictos resueltos en la temporal
 - [ ] Rango `origin/feature/base..HEAD` revisado
-- [ ] Rebase de refirma ejecutado si el rango contenía commits históricos sin firma
-- [ ] Contenido comparado con el respaldo después del rebase
+- [ ] Rebase/refirma ejecutado únicamente si el rango contenía estados `N`, `B` o `E`
+- [ ] Diff contra `origin/feature/base` revisado y pruebas ejecutadas después de resolver conflictos o refirmar
 - [ ] PR hacia `feature/base` aprobado y mergeado
-- [ ] Rama `feature/baseToDevelop` creada desde `develop` cuando fue necesaria
+- [ ] Rama `feature/baseToDevelop` creada desde `feature/base` únicamente si el PR directo tuvo conflictos
 - [ ] Rango `origin/develop..HEAD` revisado antes del PR
 - [ ] PR hacia `develop` aprobado y mergeado
 - [ ] Request ID generado y transportado a UAT
@@ -675,10 +711,12 @@ Este comando descarta la historia recreada; debe utilizarse únicamente sobre la
 - [ ] Rama release creada (feature/release-DDMM)
 - [ ] Iniciativa(s) consolidada(s) en release
 - [ ] Commits de iniciativas, release y resolución de conflictos firmados
-- [ ] Rama `release-DDMMToDevelop` creada desde `develop` cuando hubo conflictos
+- [ ] PR directo `feature/release-DDMM → develop` intentado primero
+- [ ] Rama `release-DDMMToDevelop` creada desde la release únicamente si hubo conflictos
+- [ ] `develop` incorporada mediante merge firmado y conflictos resueltos en la temporal
 - [ ] Rango `origin/develop..HEAD` revisado
-- [ ] Rebase de refirma ejecutado sobre `release-DDMMToDevelop` si había commits históricos sin firma
-- [ ] Contenido de la temporal comparado con el respaldo después del rebase
+- [ ] Rebase/refirma ejecutado sobre `release-DDMMToDevelop` únicamente si había estados `N`, `B` o `E`
+- [ ] Diff contra `origin/develop` revisado y pruebas ejecutadas después de resolver conflictos o refirmar
 - [ ] PR creado, aprobado y mergeado a develop
 - [ ] Código desplegado a MELI DEV
 - [ ] Request ID generado por CI/CD
